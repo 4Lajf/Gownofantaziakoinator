@@ -1,0 +1,5 @@
+Gównofantaziakoinator
+Sprawdź w którym miejscu na spektrum autyzmu się znajdujesz (udowodnione naukowo!)
+
+The goal of this project is to use already downloaded user lists "src\lib\data\base-users-fantasy.json" and "src\lib\data\base-users-isekai.json" for users "pastafarianin" on MyAnimeList and "Kodjax" on AniList and compare their scores on a 2d space with a prompted user create a web app in sveltekit with svelte 5 (that is a strict requirement) with shadcn-svelte framework for frotend that will enable users to input their username (either AniList or MyAnimeList) and be placed on either sides of the spectrum. Make the app have to modes "Isekai" and "Fantasy" where the first will take the tags from AniList "isekai" with more or equal to 80& OR for myanimelist search for the theme "Iskeai" in the shows "Themes".
+Make the app in dark mode and also include comparison with every anime the prompted user and the base users have in common, displaying the deviation from scores. The placing on the spectrum also derive from the deviation of scores where 100% matching scores with Kodjax is far left and 100% matching scores with "pastafarianin" is far right.
