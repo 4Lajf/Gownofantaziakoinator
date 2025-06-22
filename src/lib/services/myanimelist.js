@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { fetchAnimeThemes } from './jikan.js';
+import { GraphQLClient } from 'graphql-request';
 import dotenv from 'dotenv';
 dotenv.config();
 const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
@@ -9,11 +9,104 @@ const MAL_CLIENT_ID = process.env.MAL_CLIENT_ID || process.env.VITE_MAL_CLIENT_I
 const MAL_AUTH_URL = 'https://myanimelist.net/v1/oauth2/authorize';
 const MAL_TOKEN_URL = 'https://myanimelist.net/v1/oauth2/token';
 
+// AniList GraphQL client for isekai detection
+const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
+const anilistClient = new GraphQLClient(ANILIST_ENDPOINT);
+
 /**
  * Add delay between requests to respect API rate limits
  * @param {number} ms - Milliseconds to wait
  */
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Fetch isekai detection from AniList using malIds
+ * @param {number[]} malIds - Array of MyAnimeList IDs
+ * @param {Function} progressCallback - Optional callback for progress updates
+ * @returns {Promise<Object>} Object mapping malId to isekai detection result
+ */
+async function fetchIsekaiFromAniList(malIds, progressCallback = null) {
+  const isekaiMap = {};
+  const batchSize = 10; // Process in batches to avoid overwhelming the API
+
+  console.log(`🔍 Fetching isekai detection from AniList for ${malIds.length} anime...`);
+
+  for (let i = 0; i < malIds.length; i += batchSize) {
+    const batch = malIds.slice(i, i + batchSize);
+
+    if (progressCallback) {
+      progressCallback(
+        Math.floor(i / batchSize) + 1,
+        Math.ceil(malIds.length / batchSize),
+        `Sprawdzanie tagów isekai: ${i + 1}-${Math.min(i + batchSize, malIds.length)}/${malIds.length}`
+      );
+    }
+
+    // GraphQL query to fetch anime by malIds
+    const query = `
+      query ($malIds: [Int]) {
+        Page(page: 1, perPage: ${batchSize}) {
+          media(idMal_in: $malIds, type: ANIME) {
+            id
+            idMal
+            title {
+              romaji
+              english
+              native
+            }
+            tags {
+              name
+              rank
+            }
+            genres
+          }
+        }
+      }
+    `;
+
+    try {
+      const data = await anilistClient.request(query, { malIds: batch });
+
+      if (data.Page && data.Page.media) {
+        for (const anime of data.Page.media) {
+          if (anime.idMal) {
+            // Check for isekai tag with >80% rank
+            const hasIsekaiTag = anime.tags?.some(tag =>
+              tag.name.toLowerCase() === 'isekai' && tag.rank >= 80
+            );
+
+            // Check for fantasy genre
+            const hasFantasy = anime.genres?.includes('Fantasy');
+
+            isekaiMap[anime.idMal] = {
+              hasIsekai: hasIsekaiTag,
+              hasFantasy: hasFantasy,
+              title: anime.title.english || anime.title.romaji || anime.title.native,
+              isekaiRank: hasIsekaiTag ? anime.tags.find(t => t.name.toLowerCase() === 'isekai')?.rank : null
+            };
+
+            if (hasIsekaiTag) {
+              console.log(`🌍 Found isekai anime via AniList: "${isekaiMap[anime.idMal].title}" (rank: ${isekaiMap[anime.idMal].isekaiRank}%)`);
+            } else if (hasFantasy) {
+              console.log(`🎭 Found fantasy anime via AniList: "${isekaiMap[anime.idMal].title}"`);
+            }
+          }
+        }
+      }
+
+      // Rate limiting for AniList API (2 seconds as requested)
+      await delay(2000);
+
+    } catch (error) {
+      console.error(`Error fetching AniList data for batch ${i}-${i + batchSize}:`, error.message);
+      // Continue with next batch
+    }
+  }
+
+  console.log(`✅ AniList isekai detection completed. Found ${Object.values(isekaiMap).filter(a => a.hasIsekai).length} isekai and ${Object.values(isekaiMap).filter(a => a.hasFantasy).length} fantasy anime.`);
+
+  return isekaiMap;
+}
 
 /**
  * Generate OAuth2 authorization URL for MyAnimeList
@@ -289,76 +382,56 @@ export async function fetchMALUserBoth(username, progressCallback = null) {
       }
     }
 
-    console.log(`🔍 Filtering for both Fantasy and Isekai anime from ${allAnimeList.length} completed anime entries using Jikan API`);
+    // Extract malIds for AniList isekai detection
+    const malIds = allAnimeList.map(entry => entry.node.id);
+
+    // Fetch isekai detection from AniList using malIds
+    console.log(`🔍 Fetching isekai/fantasy classification from AniList for ${malIds.length} anime...`);
+    const isekaiMap = await fetchIsekaiFromAniList(malIds, progressCallback);
+
+    // Process each anime entry using AniList classification
+    console.log(`🔍 Processing ${allAnimeList.length} anime entries with AniList classification...`);
 
     const fantasyAnime = [];
     const isekaiAnime = [];
-    let processedCount = 0;
 
-    // Use Jikan API to filter for both fantasy and isekai simultaneously
     for (const entry of allAnimeList) {
       try {
-        processedCount++;
-
-        // Send progress update
-        if (progressCallback && processedCount % 10 === 0) {
-          const progressPercent = Math.round((processedCount / allAnimeList.length) * 100);
-          progressCallback(null, null, `Sprawdzanie anime: ${processedCount}/${allAnimeList.length} (${progressPercent}%)`);
-        }
-
-        console.log(`🔍 [${processedCount}/${allAnimeList.length}] Fetching Jikan data for: "${entry.node.title}"`);
-
-        // Fetch detailed anime information from Jikan API (includes both genres and themes)
-        const jikanData = await fetchAnimeThemes(entry.node.id);
-
-        // Check for fantasy genre
-        const genres = jikanData.genres || [];
-        const hasFantasy = genres.some(genre =>
-          genre.name.toLowerCase().includes('fantasy')
-        );
-
-        // Check for isekai theme
-        const themes = jikanData.themes || [];
-        const hasIsekai = themes.some(theme =>
-          theme.name.toLowerCase().includes('isekai')
-        );
+        const malId = entry.node.id;
+        const classification = isekaiMap[malId];
 
         // Create anime object if it matches either filter
-        if (hasFantasy || hasIsekai) {
+        if (classification?.hasIsekai || classification?.hasFantasy) {
           const animeObject = {
-            id: jikanData.mal_id,
-            malId: jikanData.mal_id, // For MAL entries, malId is the same as id
-            title: jikanData.title,
+            id: entry.node.id,
+            malId: entry.node.id, // For MAL entries, malId is the same as id
+            title: entry.node.title,
             score: entry.list_status.score || null,
             status: 'completed',
-            genres: jikanData.genres?.map(g => g.name) || [],
-            themes: jikanData.themes?.map(t => t.name) || [],
-            coverImage: jikanData.images?.jpg?.large_image_url || entry.node.main_picture?.large || entry.node.main_picture?.medium,
-            episodes: jikanData.episodes || entry.node.num_episodes,
+            genres: [], // Will be populated from AniList if available
+            themes: [], // Not using themes anymore, using AniList tags
+            coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+            episodes: entry.node.num_episodes,
             source: 'mal',
-            format: jikanData.type || entry.node.media_type,
-            year: jikanData.year || (entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null),
-            description: jikanData.synopsis || entry.node.synopsis
+            format: entry.node.media_type,
+            year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
+            description: entry.node.synopsis
           };
 
-          if (hasFantasy) {
-            console.log(`🎭 Found fantasy anime: "${jikanData.title}" with genres: [${genres.map(g => g.name).join(', ')}]`);
-            fantasyAnime.push(animeObject);
-          }
-
-          if (hasIsekai) {
-            console.log(`🌍 Found isekai anime: "${jikanData.title}" with themes: [${themes.map(t => t.name).join(', ')}]`);
+          // Classify anime using AniList data (fantasy and isekai can overlap)
+          if (classification.hasIsekai) {
+            console.log(`🌍 Classified as isekai via AniList: "${entry.node.title}" (rank: ${classification.isekaiRank}%)`);
             isekaiAnime.push(animeObject);
+          }
+          if (classification.hasFantasy) {
+            console.log(`🎭 Classified as fantasy via AniList: "${entry.node.title}"`);
+            fantasyAnime.push(animeObject);
           }
         }
 
-        // Rate limiting for Jikan API (1 request per second)
-        await delay(1000);
-
       } catch (error) {
-        console.error(`❌ Error fetching Jikan data for anime ID ${entry.node.id}:`, error.message);
+        console.error(`❌ Error processing anime "${entry.node.title}":`, error.message);
         // Continue with next anime
-        continue;
       }
     }
 
@@ -494,76 +567,56 @@ export async function fetchMALUser(username, filterType = 'fantasy', progressCal
       }
     }
 
-    console.log(`🔍 Filtering for both Fantasy and Isekai anime from ${allAnimeList.length} completed anime entries using Jikan API`);
+    // Extract malIds for AniList isekai detection
+    const malIds = allAnimeList.map(entry => entry.node.id);
+
+    // Fetch isekai detection from AniList using malIds
+    console.log(`🔍 Fetching isekai/fantasy classification from AniList for ${malIds.length} anime...`);
+    const isekaiMap = await fetchIsekaiFromAniList(malIds, progressCallback);
+
+    // Process each anime entry using AniList classification
+    console.log(`🔍 Processing ${allAnimeList.length} anime entries with AniList classification...`);
 
     const fantasyAnime = [];
     const isekaiAnime = [];
-    let processedCount = 0;
 
-    // Use Jikan API to filter for both fantasy and isekai simultaneously
     for (const entry of allAnimeList) {
       try {
-        processedCount++;
-
-        // Send progress update
-        if (progressCallback && processedCount % 10 === 0) {
-          const progressPercent = Math.round((processedCount / allAnimeList.length) * 100);
-          progressCallback(null, null, `Sprawdzanie anime: ${processedCount}/${allAnimeList.length} (${progressPercent}%)`);
-        }
-
-        console.log(`🔍 [${processedCount}/${allAnimeList.length}] Fetching Jikan data for: "${entry.node.title}"`);
-
-        // Fetch detailed anime information from Jikan API (includes both genres and themes)
-        const jikanData = await fetchAnimeThemes(entry.node.id);
-
-        // Check for fantasy genre
-        const genres = jikanData.genres || [];
-        const hasFantasy = genres.some(genre =>
-          genre.name.toLowerCase().includes('fantasy')
-        );
-
-        // Check for isekai theme
-        const themes = jikanData.themes || [];
-        const hasIsekai = themes.some(theme =>
-          theme.name.toLowerCase().includes('isekai')
-        );
+        const malId = entry.node.id;
+        const classification = isekaiMap[malId];
 
         // Create anime object if it matches either filter
-        if (hasFantasy || hasIsekai) {
+        if (classification?.hasIsekai || classification?.hasFantasy) {
           const animeObject = {
-            id: jikanData.mal_id,
-            malId: jikanData.mal_id, // For MAL entries, malId is the same as id
-            title: jikanData.title,
+            id: entry.node.id,
+            malId: entry.node.id, // For MAL entries, malId is the same as id
+            title: entry.node.title,
             score: entry.list_status.score || null,
             status: 'completed',
-            genres: jikanData.genres?.map(g => g.name) || [],
-            themes: jikanData.themes?.map(t => t.name) || [],
-            coverImage: jikanData.images?.jpg?.large_image_url || entry.node.main_picture?.large || entry.node.main_picture?.medium,
-            episodes: jikanData.episodes || entry.node.num_episodes,
+            genres: [], // Will be populated from AniList if available
+            themes: [], // Not using themes anymore, using AniList tags
+            coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+            episodes: entry.node.num_episodes,
             source: 'mal',
-            format: jikanData.type || entry.node.media_type,
-            year: jikanData.year || (entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null),
-            description: jikanData.synopsis || entry.node.synopsis
+            format: entry.node.media_type,
+            year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
+            description: entry.node.synopsis
           };
 
-          if (hasFantasy) {
-            console.log(`🎭 Found fantasy anime: "${jikanData.title}" with genres: [${genres.map(g => g.name).join(', ')}]`);
-            fantasyAnime.push(animeObject);
-          }
-
-          if (hasIsekai) {
-            console.log(`🌍 Found isekai anime: "${jikanData.title}" with themes: [${themes.map(t => t.name).join(', ')}]`);
+          // Classify anime using AniList data (fantasy and isekai can overlap)
+          if (classification.hasIsekai) {
+            console.log(`🌍 Classified as isekai via AniList: "${entry.node.title}" (rank: ${classification.isekaiRank}%)`);
             isekaiAnime.push(animeObject);
+          }
+          if (classification.hasFantasy) {
+            console.log(`🎭 Classified as fantasy via AniList: "${entry.node.title}"`);
+            fantasyAnime.push(animeObject);
           }
         }
 
-        // Rate limiting for Jikan API (1 request per second)
-        await delay(1000);
-
       } catch (error) {
-        console.error(`❌ Error fetching Jikan data for anime ID ${entry.node.id}:`, error.message);
+        console.error(`❌ Error processing anime "${entry.node.title}":`, error.message);
         // Continue with next anime
-        continue;
       }
     }
 
@@ -617,64 +670,114 @@ export async function fetchMALUser(username, filterType = 'fantasy', progressCal
 }
 
 /**
- * Search for anime by title on MyAnimeList via Jikan API
+ * Search for anime by title on AniList (since we're using AniList for classification)
  * @param {string} title - Anime title to search for
  * @returns {Promise<Object|null>}
  */
 export async function searchMALAnime(title) {
   try {
-    const response = await axios.get(`${JIKAN_BASE_URL}/anime`, {
-      params: {
-        q: title,
-        limit: 1
+    const query = `
+      query ($search: String!) {
+        Media(search: $search, type: ANIME) {
+          id
+          idMal
+          title {
+            romaji
+            english
+            native
+          }
+          genres
+          coverImage {
+            large
+          }
+          episodes
+          format
+          startDate {
+            year
+          }
+          description
+        }
       }
-    });
+    `;
 
-    const results = response.data.data;
-    if (results.length === 0) return null;
+    const data = await anilistClient.request(query, { search: title });
 
-    const anime = results[0];
+    if (!data.Media) return null;
+
+    const anime = data.Media;
     return {
-      id: anime.mal_id,
-      title: anime.title,
-      genres: anime.genres.map(g => g.name),
-      coverImage: anime.images.jpg.large_image_url,
-      episodes: anime.episodes,
-      format: anime.type,
-      year: anime.year,
-      description: anime.synopsis
+      id: anime.idMal || anime.id,
+      title: anime.title.english || anime.title.romaji || anime.title.native,
+      genres: anime.genres || [],
+      coverImage: anime.coverImage?.large || '',
+      episodes: anime.episodes || 0,
+      format: anime.format || 'unknown',
+      year: anime.startDate?.year || null,
+      description: anime.description || ''
     };
   } catch (error) {
-    console.error('Error searching MAL anime:', error);
+    console.error('Error searching anime via AniList:', error);
     return null;
   }
 }
 
 /**
- * Get detailed anime information from MAL
+ * Get detailed anime information from AniList using malId
  * @param {number} malId - MyAnimeList anime ID
  * @returns {Promise<Object|null>}
  */
 export async function getMALAnimeDetails(malId) {
   try {
-    const response = await axios.get(`${JIKAN_BASE_URL}/anime/${malId}`);
-    const anime = response.data.data;
+    const query = `
+      query ($malId: Int!) {
+        Media(idMal: $malId, type: ANIME) {
+          id
+          idMal
+          title {
+            romaji
+            english
+            native
+          }
+          genres
+          tags {
+            name
+            rank
+          }
+          coverImage {
+            large
+          }
+          episodes
+          format
+          startDate {
+            year
+          }
+          description
+          averageScore
+          popularity
+        }
+      }
+    `;
 
+    const data = await anilistClient.request(query, { malId });
+
+    if (!data.Media) return null;
+
+    const anime = data.Media;
     return {
-      id: anime.mal_id,
-      title: anime.title,
-      genres: anime.genres.map(g => g.name),
-      coverImage: anime.images.jpg.large_image_url,
-      episodes: anime.episodes,
-      format: anime.type,
-      year: anime.year,
-      description: anime.synopsis,
-      score: anime.score,
-      popularity: anime.popularity,
-      rank: anime.rank
+      id: anime.idMal || anime.id,
+      title: anime.title.english || anime.title.romaji || anime.title.native,
+      genres: anime.genres || [],
+      coverImage: anime.coverImage?.large || '',
+      episodes: anime.episodes || 0,
+      format: anime.format || 'unknown',
+      year: anime.startDate?.year || null,
+      description: anime.description || '',
+      score: anime.averageScore ? anime.averageScore / 10 : null, // Convert from 0-100 to 0-10 scale
+      popularity: anime.popularity || null,
+      rank: null // AniList doesn't provide rank in the same way
     };
   } catch (error) {
-    console.error('Error getting MAL anime details:', error);
+    console.error('Error getting anime details via AniList:', error);
     return null;
   }
 }

@@ -14,9 +14,9 @@
 	function getQuadrantColor(quadrant) {
 		const colors = {
 			pastafarianin: 'bg-red-500',
-			kodjax: 'bg-blue-500', 
+			kodjax: 'bg-yellow-500', // Swapped: Kodjax now gets yellow (was blue)
 			mayxs: 'bg-green-500',
-			blonzej: 'bg-yellow-500'
+			blonzej: 'bg-blue-500' // Swapped: Blonzej now gets blue (was yellow)
 		};
 		return colors[quadrant] || 'bg-gray-500';
 	}
@@ -110,13 +110,13 @@
 					{userDisplayNames.pastafarianin}
 				</div>
 				<div class="absolute -top-6 -right-6 text-xs text-blue-400 font-semibold">
-					{userDisplayNames.kodjax}
+					{userDisplayNames.blonzej}
 				</div>
 				<div class="absolute -bottom-6 -left-6 text-xs text-green-400 font-semibold">
 					{userDisplayNames.mayxs}
 				</div>
 				<div class="absolute -bottom-6 -right-6 text-xs text-yellow-400 font-semibold">
-					{userDisplayNames.blonzej}
+					{userDisplayNames.kodjax}
 				</div>
 			</div>
 			

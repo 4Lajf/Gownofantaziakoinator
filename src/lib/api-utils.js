@@ -1,6 +1,6 @@
 // Rate limiting utilities for AniList
 const rateLimiter = {
-	anilist: { lastRequest: 0, minInterval: 500 } // 0.5 seconds between AniList requests
+	anilist: { lastRequest: 0, minInterval: 2000 } // 2 seconds between AniList requests
 };
 
 async function waitForRateLimit(platform) {
@@ -95,6 +95,7 @@ export async function fetchAniListUserList(username) {
 							genres
 							tags {
 								name
+								rank
 							}
 							coverImage {
 								large
@@ -160,7 +161,7 @@ export async function fetchAniListUserList(username) {
 				score: entry.score,
 				status: entry.status?.toLowerCase() || 'unknown',
 				genres: entry.media.genres || [],
-				themes: entry.media.tags?.map((tag) => tag.name) || [],
+				themes: entry.media.tags?.filter((tag) => tag.rank >= 80).map((tag) => tag.name) || [],
 				coverImage: entry.media.coverImage?.large || entry.media.coverImage?.medium || '',
 				episodes: entry.media.episodes || 0,
 				source: 'anilist',

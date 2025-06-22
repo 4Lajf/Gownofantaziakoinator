@@ -33,25 +33,40 @@ export function getBaseUserAnimeList(username, mode, comparisonMode = '2-user') 
 
 // Filter anime list based on mode criteria
 export function filterAnimeByMode(animeList, mode) {
+	// Helper function to determine if an anime is considered "Isekai".
+	const isConsideredIsekai = anime =>
+		anime.hasIsekai === true ||
+		(anime.themes && anime.themes.includes('Isekai')) ||
+		(anime.themes && anime.themes.some(theme => theme.toLowerCase().includes('isekai')));
+
 	if (mode === 'fantasy') {
-		return animeList.filter(anime => 
-			anime.genres.includes('Fantasy') ||
-			anime.themes.some(theme => theme.toLowerCase().includes('fantasy'))
+		// Filter for anime that are Fantasy but are NOT considered Isekai.
+		return animeList.filter(anime =>
+			(anime.genres.includes('Fantasy') ||
+				anime.hasFantasy === true ||
+				(anime.themes && anime.themes.some(theme => theme.toLowerCase().includes('fantasy')))) &&
+			!isConsideredIsekai(anime)
 		);
 	} else if (mode === 'isekai') {
-		return animeList.filter(anime => 
-			anime.themes.includes('Isekai') ||
-			anime.themes.some(theme => theme.toLowerCase().includes('isekai'))
-		);
+		// The Isekai filter remains the same, selecting all anime that fit its criteria.
+		return animeList.filter(isConsideredIsekai);
 	}
+
 	return animeList;
 }
 
 // Find common anime between user and base users
 export function findCommonAnime(userAnimeList, pastafarianinList, kodjaxList) {
 	const comparisons = [];
+	const seenMalIds = new Set(); // Track malIds to prevent duplicates
 
 	for (const userAnime of userAnimeList) {
+		// Skip if we've already processed this malId (prevent duplicates)
+		if (userAnime.malId && seenMalIds.has(userAnime.malId)) {
+			console.log(`🔄 Skipping duplicate malId ${userAnime.malId}: "${userAnime.title}"`);
+			continue;
+		}
+
 		// Prioritize malId for matching since base users are on different platforms
 		const pastafarianinAnime = pastafarianinList.find(anime => {
 			// First try malId matching (most reliable for cross-platform)
@@ -84,6 +99,11 @@ export function findCommonAnime(userAnimeList, pastafarianinList, kodjaxList) {
 		});
 
 		if (pastafarianinAnime || kodjaxAnime) {
+			// Mark this malId as seen to prevent future duplicates
+			if (userAnime.malId) {
+				seenMalIds.add(userAnime.malId);
+			}
+
 			const comparison = {
 				anime: userAnime,
 				userScore: userAnime.score,
@@ -199,8 +219,15 @@ export function generateSpectrumResult(userAnimeList, mode, comparisonMode = '2-
 // Find common anime between user and all 4 base users
 export function findCommonAnime4Users(userAnimeList, pastafarianinList, kodjaxList, mayxsList, blonzejList) {
 	const comparisons = [];
+	const seenMalIds = new Set(); // Track malIds to prevent duplicates
 
 	for (const userAnime of userAnimeList) {
+		// Skip if we've already processed this malId (prevent duplicates)
+		if (userAnime.malId && seenMalIds.has(userAnime.malId)) {
+			console.log(`🔄 Skipping duplicate malId ${userAnime.malId}: "${userAnime.title}"`);
+			continue;
+		}
+
 		const baseUsers = {
 			pastafarianin: pastafarianinList.find(anime => matchAnime(anime, userAnime)),
 			kodjax: kodjaxList.find(anime => matchAnime(anime, userAnime)),
@@ -210,6 +237,11 @@ export function findCommonAnime4Users(userAnimeList, pastafarianinList, kodjaxLi
 
 		// Only include if at least one base user has this anime
 		if (Object.values(baseUsers).some(anime => anime)) {
+			// Mark this malId as seen to prevent future duplicates
+			if (userAnime.malId) {
+				seenMalIds.add(userAnime.malId);
+			}
+
 			const comparison = {
 				anime: userAnime,
 				userScore: userAnime.score,
@@ -375,10 +407,11 @@ export function calculate2DPosition(comparisons) {
 	};
 	
 	// Use the "alikeness" scores to determine the pull on each axis
+	// Updated for Kodjax/Blonzej swap: Blonzej now top-right, Kodjax bottom-right
 	const leftPull = alikeness.pastafarianin + alikeness.mayxs;
-	const rightPull = alikeness.kodjax + alikeness.blonzej;
-	const topPull = alikeness.pastafarianin + alikeness.kodjax;
-	const bottomPull = alikeness.mayxs + alikeness.blonzej;
+	const rightPull = alikeness.blonzej + alikeness.kodjax; // Swapped positions
+	const topPull = alikeness.pastafarianin + alikeness.blonzej; // Blonzej now top-right
+	const bottomPull = alikeness.mayxs + alikeness.kodjax; // Kodjax now bottom-right
 
 	const totalXPull = leftPull + rightPull;
 	const totalYPull = topPull + bottomPull;
@@ -452,7 +485,7 @@ export function generate4UserCompassResult(userAnimeList, mode) {
 // Determine which quadrant the user falls into
 function getQuadrant(x, y) {
 	if (x < 50 && y < 50) return 'pastafarianin'; // Top-left
-	if (x >= 50 && y < 50) return 'kodjax'; // Top-right
+	if (x >= 50 && y < 50) return 'blonzej'; // Top-right (swapped with Kodjax)
 	if (x < 50 && y >= 50) return 'mayxs'; // Bottom-left
-	return 'blonzej'; // Bottom-right
+	return 'kodjax'; // Bottom-right (swapped with Blonzej)
 }

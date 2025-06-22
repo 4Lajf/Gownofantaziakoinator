@@ -62,7 +62,7 @@ async function downloadUserDataBoth(userConfig) {
       fantasyData = bothData.fantasy;
       isekaiData = bothData.isekai;
     } else if (platform === 'mal') {
-      // For MAL, we can get both in one optimized pass using Jikan API
+      // For MAL, we can get both in one optimized pass using AniList API for classification
       console.log(`🎭🌍 Pobieranie anime fantasy i isekai jednocześnie dla ${name} (optymalizowane)...`);
 
       const bothData = await fetchMALUserBoth(username, progressCallback);
@@ -231,7 +231,7 @@ async function main() {
 
       // Add delay between users to respect rate limits
       if (BASE_USERS.indexOf(userConfig) < BASE_USERS.length - 1) {
-        const delayTime = userConfig.platform === 'mal' ? 30000 : 10000; // 30s for MAL (Jikan), 10s for AniList
+        const delayTime = userConfig.platform === 'mal' ? 30000 : 10000; // 30s for MAL (uses AniList for classification), 10s for AniList
         console.log(`⏳ Oczekiwanie ${delayTime / 1000} sekund przed następnym użytkownikiem...`);
         await new Promise(resolve => setTimeout(resolve, delayTime));
       }

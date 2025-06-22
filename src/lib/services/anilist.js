@@ -120,8 +120,8 @@ export async function fetchAniListUserBoth(username, progressCallback = null) {
         hasNextPage = data.Page.pageInfo.hasNextPage;
         currentPage++;
 
-        // Add delay to respect rate limits (increased for safety)
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to respect rate limits (2 seconds as requested)
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (error) {
         if (error.response?.status === 429) {
           // Rate limited, wait longer and retry
@@ -298,8 +298,8 @@ export async function fetchAniListUser(username, filterType = 'fantasy', progres
 
         currentPage++;
 
-        // Add delay to respect rate limits (increased for safety)
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to respect rate limits (2 seconds as requested)
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (error) {
         if (error.response?.status === 429) {
           // Rate limited, wait longer and retry
@@ -336,7 +336,7 @@ export async function fetchAniListUser(username, filterType = 'fantasy', progres
           score: entry.score,
           status: 'completed',
           genres: entry.media.genres,
-          tags: entry.media.tags?.map(tag => ({ name: tag.name, rank: tag.rank })) || [],
+          tags: entry.media.tags?.filter(tag => tag.rank >= 80).map(tag => ({ name: tag.name, rank: tag.rank })) || [],
           coverImage: entry.media.coverImage.large,
           episodes: entry.media.episodes,
           source: 'anilist',
@@ -365,7 +365,7 @@ export async function fetchAniListUser(username, filterType = 'fantasy', progres
           score: entry.score,
           status: 'completed',
           genres: entry.media.genres,
-          tags: entry.media.tags?.map(tag => ({ name: tag.name, rank: tag.rank })) || [],
+          tags: entry.media.tags?.filter(tag => tag.rank >= 80).map(tag => ({ name: tag.name, rank: tag.rank })) || [],
           coverImage: entry.media.coverImage.large,
           episodes: entry.media.episodes,
           source: 'anilist',
