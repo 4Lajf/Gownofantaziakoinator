@@ -14,7 +14,6 @@
 	"devDependencies": {
 		"@internationalized/date": "^3.8.2",
 		"@lucide/svelte": "^0.515.0",
-		"@sveltejs/adapter-auto": "^6.0.0",
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/typography": "^0.5.15",
@@ -33,9 +32,11 @@
 		"vite-plugin-devtools-json": "^0.2.0"
 	},
 	"dependencies": {
+		"@sveltejs/adapter-node": "^5.2.12",
 		"axios": "^1.10.0",
 		"dotenv": "^16.5.0",
 		"graphql-request": "^7.2.0",
-		"lucide-svelte": "^0.522.0"
+		"lucide-svelte": "^0.522.0",
+		"uninstall": "^0.0.0"
 	}
 }
