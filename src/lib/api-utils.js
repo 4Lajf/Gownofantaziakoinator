@@ -27,13 +27,10 @@ export async function fetchMALUserList(username, progressCallback) {
 		}
 
 		return data;
-
 	} catch (error) {
 		throw new Error(error.message || 'Failed to fetch MAL data');
 	}
 }
-
-
 
 // Fetch user anime list from the specified platform
 export async function fetchUserAnimeList(username, platform, progressCallback) {

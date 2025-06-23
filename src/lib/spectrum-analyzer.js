@@ -19,19 +19,19 @@ export class SpectrumAnalyzer {
 		try {
 			// Stage 1: Validation
 			this.updateProgress('validating', 'Validating username...', 10);
-			
+
 			const validation = validateUsername(username, platform);
 			if (!validation.valid) {
 				throw new AnalysisError('VALIDATION_ERROR', validation.error || 'Invalid username');
 			}
-			
+
 			// Stage 2: Fetching user data
 			this.updateProgress('fetching', `Fetching anime list from ${platform.toUpperCase()}...`, 20);
 
 			let userAnimeList;
 			try {
 				// Create a progress callback that updates the main progress
-				const fetchProgressCallback = (fetchProgress) => {
+				const fetchProgressCallback = fetchProgress => {
 					if (fetchProgress.stage === 'fetching') {
 						this.updateProgress('fetching', fetchProgress.message, 20);
 					} else if (fetchProgress.stage === 'fetched') {
@@ -56,12 +56,10 @@ export class SpectrumAnalyzer {
 
 				try {
 					// Extract malIds for classification
-					const malIds = userAnimeList.animeList
-						.filter(anime => anime.malId)
-						.map(anime => anime.malId);
+					const malIds = userAnimeList.animeList.filter(anime => anime.malId).map(anime => anime.malId);
 
 					// Create a progress callback for classification
-					const classificationProgressCallback = (classificationProgress) => {
+					const classificationProgressCallback = classificationProgress => {
 						// Map classification progress to analysis progress (40-70% range)
 						const mappedProgress = 40 + Math.floor((classificationProgress.progress / 100) * 30);
 						this.updateProgress('classifying', classificationProgress.message, mappedProgress);
@@ -72,7 +70,6 @@ export class SpectrumAnalyzer {
 
 					// Apply classification to anime list
 					userAnimeList.animeList = applyClassificationToAnimeList(userAnimeList.animeList, classificationMap);
-
 				} catch (error) {
 					console.warn('Failed to classify anime, proceeding with basic data:', error.message);
 					// Continue with unclassified data
@@ -89,66 +86,61 @@ export class SpectrumAnalyzer {
 				const errorMessage = error instanceof Error ? error.message : 'Unknown analysis error';
 				throw new AnalysisError('ANALYSIS_ERROR', errorMessage);
 			}
-			
+
 			// Check if we have enough data for a meaningful analysis
 			if (result.totalCommonAnime === 0) {
-				throw new AnalysisError('ANALYSIS_ERROR', 
-					`No common ${mode} anime found with base users. Try the other mode or a different user.`);
+				throw new AnalysisError('ANALYSIS_ERROR', `No common ${mode} anime found with base users. Try the other mode or a different user.`);
 			}
-			
+
 			// Stage 5: Complete
 			this.updateProgress('complete', 'Analysis complete!', 100);
-			
+
 			return result;
-			
 		} catch (error) {
 			if (error instanceof AnalysisError) {
 				this.updateProgress('error', error.message, 0);
 				throw error;
 			}
-			
-			const unknownError = new AnalysisError('UNKNOWN_ERROR', 
-				'An unexpected error occurred during analysis');
+
+			const unknownError = new AnalysisError('UNKNOWN_ERROR', 'An unexpected error occurred during analysis');
 			this.updateProgress('error', unknownError.message, 0);
 			throw unknownError;
 		}
 	}
-	
+
 	// Get spectrum position description
 	static getSpectrumDescription(position) {
 		if (position < 10) {
-			return "Extremely Kodjax-aligned - You have very similar taste to Kodjax";
+			return 'Extremely Kodjax-aligned - You have very similar taste to Kodjax';
 		} else if (position < 25) {
 			return "Strongly Kodjax-aligned - Your preferences lean heavily toward Kodjax's taste";
 		} else if (position < 40) {
 			return "Moderately Kodjax-aligned - You share some similarities with Kodjax's preferences";
 		} else if (position < 60) {
-			return "Balanced - Your taste falls somewhere between both base users";
+			return 'Balanced - Your taste falls somewhere between both base users';
 		} else if (position < 75) {
 			return "Moderately MrBall-aligned - You share some similarities with MrBall's preferences";
 		} else if (position < 90) {
 			return "Strongly MrBall-aligned - Your preferences lean heavily toward MrBall's taste";
 		} else {
-			return "Extremely MrBall-aligned - You have very similar taste to MrBall";
+			return 'Extremely MrBall-aligned - You have very similar taste to MrBall';
 		}
 	}
-	
+
 	// Get confidence level description
 	static getConfidenceDescription(confidence) {
 		if (confidence < 20) {
-			return "Very Low - Based on very few common anime";
+			return 'Very Low - Based on very few common anime';
 		} else if (confidence < 40) {
-			return "Low - Based on limited common anime";
+			return 'Low - Based on limited common anime';
 		} else if (confidence < 60) {
-			return "Moderate - Based on a reasonable number of common anime";
+			return 'Moderate - Based on a reasonable number of common anime';
 		} else if (confidence < 80) {
-			return "High - Based on many common anime";
+			return 'High - Based on many common anime';
 		} else {
-			return "Very High - Based on extensive common anime data";
+			return 'Very High - Based on extensive common anime data';
 		}
 	}
-	
-
 
 	// Get quadrant description for 4-user compass
 	static getQuadrantDescription(quadrant) {
@@ -158,13 +150,13 @@ export class SpectrumAnalyzer {
 			mayxs: "MaYxS Quadrant - You align most closely with MaYxS's taste",
 			blonzej: "Blonzej Quadrant - You align most closely with Blonzej's taste"
 		};
-		return descriptions[quadrant] || "Unknown quadrant";
+		return descriptions[quadrant] || 'Unknown quadrant';
 	}
 
 	// Get 2D position description
 	static get2DPositionDescription(x, y) {
-		const horizontal = x < 25 ? "Far Left" : x < 50 ? "Left" : x < 75 ? "Right" : "Far Right";
-		const vertical = y < 25 ? "Top" : y < 50 ? "Upper" : y < 75 ? "Lower" : "Bottom";
+		const horizontal = x < 25 ? 'Far Left' : x < 50 ? 'Left' : x < 75 ? 'Right' : 'Far Right';
+		const vertical = y < 25 ? 'Top' : y < 50 ? 'Upper' : y < 75 ? 'Lower' : 'Bottom';
 		return `${vertical} ${horizontal}`;
 	}
 }

@@ -17,7 +17,7 @@ const anilistClient = new GraphQLClient(ANILIST_ENDPOINT);
  * Add delay between requests to respect API rate limits
  * @param {number} ms - Milliseconds to wait
  */
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Fetch isekai detection from AniList using malIds
@@ -26,24 +26,24 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * @returns {Promise<Object>} Object mapping malId to isekai detection result
  */
 async function fetchIsekaiFromAniList(malIds, progressCallback = null) {
-  const isekaiMap = {};
-  const batchSize = 10; // Process in batches to avoid overwhelming the API
+	const isekaiMap = {};
+	const batchSize = 10; // Process in batches to avoid overwhelming the API
 
-  console.log(`🔍 Fetching isekai detection from AniList for ${malIds.length} anime...`);
+	console.log(`🔍 Fetching isekai detection from AniList for ${malIds.length} anime...`);
 
-  for (let i = 0; i < malIds.length; i += batchSize) {
-    const batch = malIds.slice(i, i + batchSize);
+	for (let i = 0; i < malIds.length; i += batchSize) {
+		const batch = malIds.slice(i, i + batchSize);
 
-    if (progressCallback) {
-      progressCallback(
-        Math.floor(i / batchSize) + 1,
-        Math.ceil(malIds.length / batchSize),
-        `Sprawdzanie tagów isekai: ${i + 1}-${Math.min(i + batchSize, malIds.length)}/${malIds.length}`
-      );
-    }
+		if (progressCallback) {
+			progressCallback(
+				Math.floor(i / batchSize) + 1,
+				Math.ceil(malIds.length / batchSize),
+				`Sprawdzanie tagów isekai: ${i + 1}-${Math.min(i + batchSize, malIds.length)}/${malIds.length}`
+			);
+		}
 
-    // GraphQL query to fetch anime by malIds
-    const query = `
+		// GraphQL query to fetch anime by malIds
+		const query = `
       query ($malIds: [Int]) {
         Page(page: 1, perPage: ${batchSize}) {
           media(idMal_in: $malIds, type: ANIME) {
@@ -64,48 +64,47 @@ async function fetchIsekaiFromAniList(malIds, progressCallback = null) {
       }
     `;
 
-    try {
-      const data = await anilistClient.request(query, { malIds: batch });
+		try {
+			const data = await anilistClient.request(query, { malIds: batch });
 
-      if (data.Page && data.Page.media) {
-        for (const anime of data.Page.media) {
-          if (anime.idMal) {
-            // Check for isekai tag with >80% rank
-            const hasIsekaiTag = anime.tags?.some(tag =>
-              tag.name.toLowerCase() === 'isekai' && tag.rank >= 80
-            );
+			if (data.Page && data.Page.media) {
+				for (const anime of data.Page.media) {
+					if (anime.idMal) {
+						// Check for isekai tag with >80% rank
+						const hasIsekaiTag = anime.tags?.some(tag => tag.name.toLowerCase() === 'isekai' && tag.rank >= 80);
 
-            // Check for fantasy genre
-            const hasFantasy = anime.genres?.includes('Fantasy');
+						// Check for fantasy genre
+						const hasFantasy = anime.genres?.includes('Fantasy');
 
-            isekaiMap[anime.idMal] = {
-              hasIsekai: hasIsekaiTag,
-              hasFantasy: hasFantasy,
-              title: anime.title.english || anime.title.romaji || anime.title.native,
-              isekaiRank: hasIsekaiTag ? anime.tags.find(t => t.name.toLowerCase() === 'isekai')?.rank : null
-            };
+						isekaiMap[anime.idMal] = {
+							hasIsekai: hasIsekaiTag,
+							hasFantasy: hasFantasy,
+							title: anime.title.english || anime.title.romaji || anime.title.native,
+							isekaiRank: hasIsekaiTag ? anime.tags.find(t => t.name.toLowerCase() === 'isekai')?.rank : null
+						};
 
-            if (hasIsekaiTag) {
-              console.log(`🌍 Found isekai anime via AniList: "${isekaiMap[anime.idMal].title}" (rank: ${isekaiMap[anime.idMal].isekaiRank}%)`);
-            } else if (hasFantasy) {
-              console.log(`🎭 Found fantasy anime via AniList: "${isekaiMap[anime.idMal].title}"`);
-            }
-          }
-        }
-      }
+						if (hasIsekaiTag) {
+							console.log(`🌍 Found isekai anime via AniList: "${isekaiMap[anime.idMal].title}" (rank: ${isekaiMap[anime.idMal].isekaiRank}%)`);
+						} else if (hasFantasy) {
+							console.log(`🎭 Found fantasy anime via AniList: "${isekaiMap[anime.idMal].title}"`);
+						}
+					}
+				}
+			}
 
-      // Rate limiting for AniList API (2 seconds as requested)
-      await delay(2000);
+			// Rate limiting for AniList API (2 seconds as requested)
+			await delay(2000);
+		} catch (error) {
+			console.error(`Error fetching AniList data for batch ${i}-${i + batchSize}:`, error.message);
+			// Continue with next batch
+		}
+	}
 
-    } catch (error) {
-      console.error(`Error fetching AniList data for batch ${i}-${i + batchSize}:`, error.message);
-      // Continue with next batch
-    }
-  }
+	console.log(
+		`✅ AniList isekai detection completed. Found ${Object.values(isekaiMap).filter(a => a.hasIsekai).length} isekai and ${Object.values(isekaiMap).filter(a => a.hasFantasy).length} fantasy anime.`
+	);
 
-  console.log(`✅ AniList isekai detection completed. Found ${Object.values(isekaiMap).filter(a => a.hasIsekai).length} isekai and ${Object.values(isekaiMap).filter(a => a.hasFantasy).length} fantasy anime.`);
-
-  return isekaiMap;
+	return isekaiMap;
 }
 
 /**
@@ -115,15 +114,15 @@ async function fetchIsekaiFromAniList(malIds, progressCallback = null) {
  * @returns {string} Authorization URL
  */
 export function generateMALAuthUrl(redirectUri, state) {
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: MAL_CLIENT_ID,
-    redirect_uri: redirectUri,
-    state: state,
-    scope: 'read'
-  });
+	const params = new URLSearchParams({
+		response_type: 'code',
+		client_id: MAL_CLIENT_ID,
+		redirect_uri: redirectUri,
+		state: state,
+		scope: 'read'
+	});
 
-  return `${MAL_AUTH_URL}?${params.toString()}`;
+	return `${MAL_AUTH_URL}?${params.toString()}`;
 }
 
 /**
@@ -133,23 +132,27 @@ export function generateMALAuthUrl(redirectUri, state) {
  * @returns {Promise<Object>} Token response
  */
 export async function exchangeMALCode(code, redirectUri) {
-  try {
-    const response = await axios.post(MAL_TOKEN_URL, {
-      client_id: MAL_CLIENT_ID,
-      code: code,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code'
-    }, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    });
+	try {
+		const response = await axios.post(
+			MAL_TOKEN_URL,
+			{
+				client_id: MAL_CLIENT_ID,
+				code: code,
+				redirect_uri: redirectUri,
+				grant_type: 'authorization_code'
+			},
+			{
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded'
+				}
+			}
+		);
 
-    return response.data;
-  } catch (error) {
-    console.error('Error exchanging MAL code:', error);
-    throw new Error(`Failed to exchange MAL code: ${error.message}`);
-  }
+		return response.data;
+	} catch (error) {
+		console.error('Error exchanging MAL code:', error);
+		throw new Error(`Failed to exchange MAL code: ${error.message}`);
+	}
 }
 
 /**
@@ -159,144 +162,142 @@ export async function exchangeMALCode(code, redirectUri) {
  * @returns {Promise<import('../types.js').UserProfile>}
  */
 export async function fetchMALUserWithToken(accessToken, progressCallback = null) {
-  try {
-    console.log('🔍 Starting MAL fetch with OAuth token');
+	try {
+		console.log('🔍 Starting MAL fetch with OAuth token');
 
-    // Get user profile
-    console.log('👤 Fetching MAL user profile...');
-    const userResponse = await axios.get(`${MAL_API_BASE_URL}/users/@me`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-    const userInfo = userResponse.data;
+		// Get user profile
+		console.log('👤 Fetching MAL user profile...');
+		const userResponse = await axios.get(`${MAL_API_BASE_URL}/users/@me`, {
+			headers: {
+				Authorization: `Bearer ${accessToken}`
+			}
+		});
+		const userInfo = userResponse.data;
 
-    console.log('✅ MAL user profile retrieved:', {
-      id: userInfo.id,
-      name: userInfo.name
-    });
+		console.log('✅ MAL user profile retrieved:', {
+			id: userInfo.id,
+			name: userInfo.name
+		});
 
-    await delay(1000); // Rate limit delay
+		await delay(1000); // Rate limit delay
 
-    // Get user's completed anime list
-    let allAnimeList = [];
-    let nextUrl = `${MAL_API_BASE_URL}/users/@me/animelist?status=completed&limit=1000&fields=list_status,anime{id,title,main_picture,genres,num_episodes,media_type,start_date,synopsis}`;
-    let currentPage = 1;
-    let estimatedTotalPages = null;
+		// Get user's completed anime list
+		let allAnimeList = [];
+		let nextUrl = `${MAL_API_BASE_URL}/users/@me/animelist?status=completed&limit=1000&fields=list_status,anime{id,title,main_picture,genres,num_episodes,media_type,start_date,synopsis}`;
+		let currentPage = 1;
+		let estimatedTotalPages = null;
 
-    while (nextUrl) {
-      try {
-        console.log(`📄 Fetching MAL page ${currentPage}...`);
+		while (nextUrl) {
+			try {
+				console.log(`📄 Fetching MAL page ${currentPage}...`);
 
-        // Send progress update if callback provided
-        if (progressCallback) {
-          const message = estimatedTotalPages
-            ? `Pobieranie strony ${currentPage} z ~${estimatedTotalPages} z MyAnimeList...`
-            : `Pobieranie strony ${currentPage} z MyAnimeList...`;
-          progressCallback(currentPage, estimatedTotalPages, message);
-        }
+				// Send progress update if callback provided
+				if (progressCallback) {
+					const message = estimatedTotalPages
+						? `Pobieranie strony ${currentPage} z ~${estimatedTotalPages} z MyAnimeList...`
+						: `Pobieranie strony ${currentPage} z MyAnimeList...`;
+					progressCallback(currentPage, estimatedTotalPages, message);
+				}
 
-        const listResponse = await axios.get(nextUrl, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
+				const listResponse = await axios.get(nextUrl, {
+					headers: {
+						Authorization: `Bearer ${accessToken}`
+					}
+				});
 
-        const pageData = listResponse.data;
-        const pageItems = pageData.data || [];
-        allAnimeList = allAnimeList.concat(pageItems);
+				const pageData = listResponse.data;
+				const pageItems = pageData.data || [];
+				allAnimeList = allAnimeList.concat(pageItems);
 
-        // Get next page URL from paging
-        nextUrl = pageData.paging?.next || null;
+				// Get next page URL from paging
+				nextUrl = pageData.paging?.next || null;
 
-        console.log(`✅ MAL page ${currentPage} fetched:`, {
-          itemsOnPage: pageItems.length,
-          totalItems: allAnimeList.length,
-          hasNextPage: !!nextUrl
-        });
+				console.log(`✅ MAL page ${currentPage} fetched:`, {
+					itemsOnPage: pageItems.length,
+					totalItems: allAnimeList.length,
+					hasNextPage: !!nextUrl
+				});
 
-        // Send progress update
-        if (progressCallback) {
-          const progressMessage = `Pobrano ${currentPage} stron z MyAnimeList (${allAnimeList.length} anime)`;
-          progressCallback(currentPage, null, progressMessage);
-        }
+				// Send progress update
+				if (progressCallback) {
+					const progressMessage = `Pobrano ${currentPage} stron z MyAnimeList (${allAnimeList.length} anime)`;
+					progressCallback(currentPage, null, progressMessage);
+				}
 
-        currentPage++;
-        await delay(1000); // Rate limit delay
+				currentPage++;
+				await delay(1000); // Rate limit delay
+			} catch (error) {
+				if (error.response?.status === 429) {
+					// Rate limited, wait longer
+					console.log(`⏳ MAL rate limited on page ${currentPage}, waiting 5 seconds...`);
+					await delay(5000);
+					continue;
+				}
+				console.error(`❌ Error fetching MAL page ${currentPage}:`, error.message);
+				throw error;
+			}
+		}
 
-      } catch (error) {
-        if (error.response?.status === 429) {
-          // Rate limited, wait longer
-          console.log(`⏳ MAL rate limited on page ${currentPage}, waiting 5 seconds...`);
-          await delay(5000);
-          continue;
-        }
-        console.error(`❌ Error fetching MAL page ${currentPage}:`, error.message);
-        throw error;
-      }
-    }
+		console.log('🔍 Filtering for completed fantasy anime from', allAnimeList.length, 'completed MAL entries...');
 
-    console.log('🔍 Filtering for completed fantasy anime from', allAnimeList.length, 'completed MAL entries...');
+		// Filter for completed fantasy anime and map to our format
+		const fantasyAnime = [];
 
-    // Filter for completed fantasy anime and map to our format
-    const fantasyAnime = [];
+		for (const entry of allAnimeList) {
+			// Check if anime has fantasy genre
+			const hasFantasy = entry.node.genres?.some(genre => genre.name.toLowerCase().includes('fantasy'));
 
-    for (const entry of allAnimeList) {
-      // Check if anime has fantasy genre
-      const hasFantasy = entry.node.genres?.some(genre => genre.name.toLowerCase().includes('fantasy'));
+			if (hasFantasy) {
+				fantasyAnime.push({
+					id: entry.node.id,
+					title: entry.node.title,
+					score: entry.list_status.score || null,
+					status: 'completed',
+					genres: entry.node.genres?.map(g => g.name) || [],
+					coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+					episodes: entry.node.num_episodes,
+					source: 'mal',
+					format: entry.node.media_type,
+					year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
+					description: entry.node.synopsis
+				});
+			}
+		}
 
-      if (hasFantasy) {
-        fantasyAnime.push({
-          id: entry.node.id,
-          title: entry.node.title,
-          score: entry.list_status.score || null,
-          status: 'completed',
-          genres: entry.node.genres?.map(g => g.name) || [],
-          coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
-          episodes: entry.node.num_episodes,
-          source: 'mal',
-          format: entry.node.media_type,
-          year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
-          description: entry.node.synopsis
-        });
-      }
-    }
+		console.log('✅ MAL fantasy filtering complete:', {
+			totalEntries: allAnimeList.length,
+			fantasyEntries: fantasyAnime.length,
+			percentage: Math.round((fantasyAnime.length / allAnimeList.length) * 100) + '%'
+		});
 
-    console.log('✅ MAL fantasy filtering complete:', {
-      totalEntries: allAnimeList.length,
-      fantasyEntries: fantasyAnime.length,
-      percentage: Math.round((fantasyAnime.length / allAnimeList.length) * 100) + '%'
-    });
+		const result = {
+			username: userInfo.name,
+			platform: 'mal',
+			avatar: userInfo.picture || null,
+			animeCount: allAnimeList.length,
+			meanScore: 0, // We'll calculate this from the scores
+			fantasyAnime
+		};
 
-    const result = {
-      username: userInfo.name,
-      platform: 'mal',
-      avatar: userInfo.picture || null,
-      animeCount: allAnimeList.length,
-      meanScore: 0, // We'll calculate this from the scores
-      fantasyAnime
-    };
+		// Calculate mean score from completed anime
+		const scoredAnime = allAnimeList.filter(entry => entry.list_status.score > 0);
+		if (scoredAnime.length > 0) {
+			const totalScore = scoredAnime.reduce((sum, entry) => sum + entry.list_status.score, 0);
+			result.meanScore = Math.round((totalScore / scoredAnime.length) * 100) / 100;
+		}
 
-    // Calculate mean score from completed anime
-    const scoredAnime = allAnimeList.filter(entry => entry.list_status.score > 0);
-    if (scoredAnime.length > 0) {
-      const totalScore = scoredAnime.reduce((sum, entry) => sum + entry.list_status.score, 0);
-      result.meanScore = Math.round((totalScore / scoredAnime.length) * 100) / 100;
-    }
+		console.log('🎉 MAL user fetch completed:', {
+			username: result.username,
+			totalAnime: result.animeCount,
+			fantasyAnime: result.fantasyAnime.length,
+			meanScore: result.meanScore
+		});
 
-    console.log('🎉 MAL user fetch completed:', {
-      username: result.username,
-      totalAnime: result.animeCount,
-      fantasyAnime: result.fantasyAnime.length,
-      meanScore: result.meanScore
-    });
-
-    return result;
-
-  } catch (error) {
-    console.error('Error fetching MAL user with token:', error);
-    throw new Error(`Failed to fetch MAL user: ${error.message}`);
-  }
+		return result;
+	} catch (error) {
+		console.error('Error fetching MAL user with token:', error);
+		throw new Error(`Failed to fetch MAL user: ${error.message}`);
+	}
 }
 
 /**
@@ -313,360 +314,353 @@ export async function fetchMALUserWithToken(accessToken, progressCallback = null
  * @returns {Promise<{fantasy: Object, isekai: Object}>}
  */
 export async function fetchMALUserBoth(username, progressCallback = null) {
-  try {
-    console.log('🔍 Starting MAL fetch for both fantasy and isekai for user:', username);
+	try {
+		console.log('🔍 Starting MAL fetch for both fantasy and isekai for user:', username);
 
-    // Get user's completed anime list using official MAL API with pagination
-    let allAnimeList = [];
-    let offset = 0;
-    const limit = 1000; // Maximum allowed by API
-    let hasMoreData = true;
-    let currentPage = 1;
+		// Get user's completed anime list using official MAL API with pagination
+		let allAnimeList = [];
+		let offset = 0;
+		const limit = 1000; // Maximum allowed by API
+		let hasMoreData = true;
+		let currentPage = 1;
 
-    console.log(`📡 Fetching completed anime list for ${username}...`);
+		console.log(`📡 Fetching completed anime list for ${username}...`);
 
-    while (hasMoreData) {
-      try {
-        console.log(`📄 Fetching MAL page ${currentPage} for ${username} (offset: ${offset})...`);
+		while (hasMoreData) {
+			try {
+				console.log(`📄 Fetching MAL page ${currentPage} for ${username} (offset: ${offset})...`);
 
-        // Send progress update if callback provided
-        if (progressCallback) {
-          progressCallback(currentPage, null, `Pobieranie strony ${currentPage} z MyAnimeList...`);
-        }
+				// Send progress update if callback provided
+				if (progressCallback) {
+					progressCallback(currentPage, null, `Pobieranie strony ${currentPage} z MyAnimeList...`);
+				}
 
-        const response = await axios.get(`${MAL_API_BASE_URL}/users/${username}/animelist`, {
-          headers: {
-            'X-MAL-CLIENT-ID': MAL_CLIENT_ID
-          },
-          params: {
-            status: 'completed',
-            limit: limit,
-            offset: offset,
-            fields: 'list_status,node{id,title,main_picture,num_episodes,media_type,start_date,synopsis}'
-          }
-        });
+				const response = await axios.get(`${MAL_API_BASE_URL}/users/${username}/animelist`, {
+					headers: {
+						'X-MAL-CLIENT-ID': MAL_CLIENT_ID
+					},
+					params: {
+						status: 'completed',
+						limit: limit,
+						offset: offset,
+						fields: 'list_status,node{id,title,main_picture,num_episodes,media_type,start_date,synopsis}'
+					}
+				});
 
-        const pageData = response.data;
-        const pageItems = pageData.data || [];
-        allAnimeList = allAnimeList.concat(pageItems);
+				const pageData = response.data;
+				const pageItems = pageData.data || [];
+				allAnimeList = allAnimeList.concat(pageItems);
 
-        // Check if we have more data
-        hasMoreData = pageItems.length === limit;
-        offset += limit;
+				// Check if we have more data
+				hasMoreData = pageItems.length === limit;
+				offset += limit;
 
-        console.log(`✅ MAL page ${currentPage} fetched:`, {
-          itemsOnPage: pageItems.length,
-          totalItems: allAnimeList.length,
-          hasMoreData,
-          nextOffset: offset
-        });
+				console.log(`✅ MAL page ${currentPage} fetched:`, {
+					itemsOnPage: pageItems.length,
+					totalItems: allAnimeList.length,
+					hasMoreData,
+					nextOffset: offset
+				});
 
-        // Send progress update
-        if (progressCallback) {
-          const progressMessage = `Pobrano ${currentPage} stron z MyAnimeList (${allAnimeList.length} anime)`;
-          progressCallback(currentPage, null, progressMessage);
-        }
+				// Send progress update
+				if (progressCallback) {
+					const progressMessage = `Pobrano ${currentPage} stron z MyAnimeList (${allAnimeList.length} anime)`;
+					progressCallback(currentPage, null, progressMessage);
+				}
 
-        currentPage++;
-        await delay(1000); // Rate limit delay
+				currentPage++;
+				await delay(1000); // Rate limit delay
+			} catch (error) {
+				if (error.response?.status === 429) {
+					// Rate limited, wait longer
+					console.log(`⏳ MAL rate limited on page ${currentPage}, waiting 5 seconds...`);
+					await delay(5000);
+					continue;
+				}
+				console.error(`❌ Error fetching MAL page ${currentPage}:`, error.message);
+				throw error;
+			}
+		}
 
-      } catch (error) {
-        if (error.response?.status === 429) {
-          // Rate limited, wait longer
-          console.log(`⏳ MAL rate limited on page ${currentPage}, waiting 5 seconds...`);
-          await delay(5000);
-          continue;
-        }
-        console.error(`❌ Error fetching MAL page ${currentPage}:`, error.message);
-        throw error;
-      }
-    }
+		// Extract malIds for AniList isekai detection
+		const malIds = allAnimeList.map(entry => entry.node.id);
 
-    // Extract malIds for AniList isekai detection
-    const malIds = allAnimeList.map(entry => entry.node.id);
+		// Fetch isekai detection from AniList using malIds
+		console.log(`🔍 Fetching isekai/fantasy classification from AniList for ${malIds.length} anime...`);
+		const isekaiMap = await fetchIsekaiFromAniList(malIds, progressCallback);
 
-    // Fetch isekai detection from AniList using malIds
-    console.log(`🔍 Fetching isekai/fantasy classification from AniList for ${malIds.length} anime...`);
-    const isekaiMap = await fetchIsekaiFromAniList(malIds, progressCallback);
+		// Process each anime entry using AniList classification
+		console.log(`🔍 Processing ${allAnimeList.length} anime entries with AniList classification...`);
 
-    // Process each anime entry using AniList classification
-    console.log(`🔍 Processing ${allAnimeList.length} anime entries with AniList classification...`);
+		const fantasyAnime = [];
+		const isekaiAnime = [];
 
-    const fantasyAnime = [];
-    const isekaiAnime = [];
+		for (const entry of allAnimeList) {
+			try {
+				const malId = entry.node.id;
+				const classification = isekaiMap[malId];
 
-    for (const entry of allAnimeList) {
-      try {
-        const malId = entry.node.id;
-        const classification = isekaiMap[malId];
+				// Create anime object if it matches either filter
+				if (classification?.hasIsekai || classification?.hasFantasy) {
+					const animeObject = {
+						id: entry.node.id,
+						malId: entry.node.id, // For MAL entries, malId is the same as id
+						title: entry.node.title,
+						score: entry.list_status.score || null,
+						status: 'completed',
+						genres: [], // Will be populated from AniList if available
+						themes: [], // Not using themes anymore, using AniList tags
+						coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+						episodes: entry.node.num_episodes,
+						source: 'mal',
+						format: entry.node.media_type,
+						year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
+						description: entry.node.synopsis
+					};
 
-        // Create anime object if it matches either filter
-        if (classification?.hasIsekai || classification?.hasFantasy) {
-          const animeObject = {
-            id: entry.node.id,
-            malId: entry.node.id, // For MAL entries, malId is the same as id
-            title: entry.node.title,
-            score: entry.list_status.score || null,
-            status: 'completed',
-            genres: [], // Will be populated from AniList if available
-            themes: [], // Not using themes anymore, using AniList tags
-            coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
-            episodes: entry.node.num_episodes,
-            source: 'mal',
-            format: entry.node.media_type,
-            year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
-            description: entry.node.synopsis
-          };
+					// Classify anime using AniList data (fantasy and isekai can overlap)
+					if (classification.hasIsekai) {
+						console.log(`🌍 Classified as isekai via AniList: "${entry.node.title}" (rank: ${classification.isekaiRank}%)`);
+						isekaiAnime.push(animeObject);
+					}
+					if (classification.hasFantasy) {
+						console.log(`🎭 Classified as fantasy via AniList: "${entry.node.title}"`);
+						fantasyAnime.push(animeObject);
+					}
+				}
+			} catch (error) {
+				console.error(`❌ Error processing anime "${entry.node.title}":`, error.message);
+				// Continue with next anime
+			}
+		}
 
-          // Classify anime using AniList data (fantasy and isekai can overlap)
-          if (classification.hasIsekai) {
-            console.log(`🌍 Classified as isekai via AniList: "${entry.node.title}" (rank: ${classification.isekaiRank}%)`);
-            isekaiAnime.push(animeObject);
-          }
-          if (classification.hasFantasy) {
-            console.log(`🎭 Classified as fantasy via AniList: "${entry.node.title}"`);
-            fantasyAnime.push(animeObject);
-          }
-        }
+		console.log(`✅ Processed ${processedCount} anime entries`);
 
-      } catch (error) {
-        console.error(`❌ Error processing anime "${entry.node.title}":`, error.message);
-        // Continue with next anime
-      }
-    }
+		// Send final progress update
+		if (progressCallback) {
+			progressCallback(null, null, `Zakończono sprawdzanie: ${fantasyAnime.length} fantasy, ${isekaiAnime.length} isekai`);
+		}
 
-    console.log(`✅ Processed ${processedCount} anime entries`);
+		console.log(`✅ MAL dual filtering complete:`, {
+			totalEntries: allAnimeList.length,
+			fantasyEntries: fantasyAnime.length,
+			isekaiEntries: isekaiAnime.length,
+			fantasyPercentage: Math.round((fantasyAnime.length / allAnimeList.length) * 100) + '%',
+			isekaiPercentage: Math.round((isekaiAnime.length / allAnimeList.length) * 100) + '%'
+		});
 
-    // Send final progress update
-    if (progressCallback) {
-      progressCallback(null, null, `Zakończono sprawdzanie: ${fantasyAnime.length} fantasy, ${isekaiAnime.length} isekai`);
-    }
+		// Calculate mean score from completed anime
+		const scoredAnime = allAnimeList.filter(entry => entry.list_status.score > 0);
+		const meanScore =
+			scoredAnime.length > 0 ? Math.round((scoredAnime.reduce((sum, entry) => sum + entry.list_status.score, 0) / scoredAnime.length) * 100) / 100 : 0;
 
-    console.log(`✅ MAL dual filtering complete:`, {
-      totalEntries: allAnimeList.length,
-      fantasyEntries: fantasyAnime.length,
-      isekaiEntries: isekaiAnime.length,
-      fantasyPercentage: Math.round((fantasyAnime.length / allAnimeList.length) * 100) + '%',
-      isekaiPercentage: Math.round((isekaiAnime.length / allAnimeList.length) * 100) + '%'
-    });
+		const fantasyResult = {
+			username: username,
+			platform: 'mal',
+			avatar: null,
+			animeCount: allAnimeList.length,
+			meanScore: meanScore,
+			fantasyAnime
+		};
 
-    // Calculate mean score from completed anime
-    const scoredAnime = allAnimeList.filter(entry => entry.list_status.score > 0);
-    const meanScore = scoredAnime.length > 0
-      ? Math.round((scoredAnime.reduce((sum, entry) => sum + entry.list_status.score, 0) / scoredAnime.length) * 100) / 100
-      : 0;
+		const isekaiResult = {
+			username: username,
+			platform: 'mal',
+			avatar: null,
+			animeCount: allAnimeList.length,
+			meanScore: meanScore,
+			isekaiAnime
+		};
 
-    const fantasyResult = {
-      username: username,
-      platform: 'mal',
-      avatar: null,
-      animeCount: allAnimeList.length,
-      meanScore: meanScore,
-      fantasyAnime
-    };
+		console.log('🎉 MAL dual user fetch completed:', {
+			username: username,
+			totalAnime: allAnimeList.length,
+			fantasyAnime: fantasyAnime.length,
+			isekaiAnime: isekaiAnime.length,
+			meanScore: meanScore
+		});
 
-    const isekaiResult = {
-      username: username,
-      platform: 'mal',
-      avatar: null,
-      animeCount: allAnimeList.length,
-      meanScore: meanScore,
-      isekaiAnime
-    };
-
-    console.log('🎉 MAL dual user fetch completed:', {
-      username: username,
-      totalAnime: allAnimeList.length,
-      fantasyAnime: fantasyAnime.length,
-      isekaiAnime: isekaiAnime.length,
-      meanScore: meanScore
-    });
-
-    return {
-      fantasy: fantasyResult,
-      isekai: isekaiResult
-    };
-
-  } catch (error) {
-    console.error('Error fetching MAL user (both):', error);
-    throw new Error(`Failed to fetch MAL user: ${error.message}`);
-  }
+		return {
+			fantasy: fantasyResult,
+			isekai: isekaiResult
+		};
+	} catch (error) {
+		console.error('Error fetching MAL user (both):', error);
+		throw new Error(`Failed to fetch MAL user: ${error.message}`);
+	}
 }
 
 export async function fetchMALUser(username, filterType = 'fantasy', progressCallback = null) {
-  try {
-    console.log('🔍 Starting MAL fetch for user:', username);
+	try {
+		console.log('🔍 Starting MAL fetch for user:', username);
 
-    if (!MAL_CLIENT_ID || MAL_CLIENT_ID === 'your-client-id-here') {
-      throw new Error('MyAnimeList Client ID is not configured. Please set MAL_CLIENT_ID in environment variables.');
-    }
+		if (!MAL_CLIENT_ID || MAL_CLIENT_ID === 'your-client-id-here') {
+			throw new Error('MyAnimeList Client ID is not configured. Please set MAL_CLIENT_ID in environment variables.');
+		}
 
-    // Get user's completed anime list using official MAL API with pagination
-    let allAnimeList = [];
-    let offset = 0;
-    const limit = 1000; // Maximum allowed by API
-    let hasMoreData = true;
-    let currentPage = 1;
+		// Get user's completed anime list using official MAL API with pagination
+		let allAnimeList = [];
+		let offset = 0;
+		const limit = 1000; // Maximum allowed by API
+		let hasMoreData = true;
+		let currentPage = 1;
 
-    console.log(`📡 Fetching completed anime list for ${username}...`);
+		console.log(`📡 Fetching completed anime list for ${username}...`);
 
-    while (hasMoreData) {
-      try {
-        console.log(`📄 Fetching MAL page ${currentPage} for ${username} (offset: ${offset})...`);
+		while (hasMoreData) {
+			try {
+				console.log(`📄 Fetching MAL page ${currentPage} for ${username} (offset: ${offset})...`);
 
-        // Send progress update if callback provided
-        if (progressCallback) {
-          progressCallback(currentPage, null, `Pobieranie strony ${currentPage} z MyAnimeList...`);
-        }
+				// Send progress update if callback provided
+				if (progressCallback) {
+					progressCallback(currentPage, null, `Pobieranie strony ${currentPage} z MyAnimeList...`);
+				}
 
-        const response = await axios.get(`${MAL_API_BASE_URL}/users/${username}/animelist`, {
-          headers: {
-            'X-MAL-CLIENT-ID': MAL_CLIENT_ID
-          },
-          params: {
-            status: 'completed',
-            limit: limit,
-            offset: offset,
-            fields: 'list_status,node{id,title,main_picture,genres,num_episodes,media_type,start_date,synopsis}'
-          }
-        });
+				const response = await axios.get(`${MAL_API_BASE_URL}/users/${username}/animelist`, {
+					headers: {
+						'X-MAL-CLIENT-ID': MAL_CLIENT_ID
+					},
+					params: {
+						status: 'completed',
+						limit: limit,
+						offset: offset,
+						fields: 'list_status,node{id,title,main_picture,genres,num_episodes,media_type,start_date,synopsis}'
+					}
+				});
 
-        const pageData = response.data;
-        const pageItems = pageData.data || [];
-        allAnimeList = allAnimeList.concat(pageItems);
+				const pageData = response.data;
+				const pageItems = pageData.data || [];
+				allAnimeList = allAnimeList.concat(pageItems);
 
-        // Check if we have more data
-        hasMoreData = pageItems.length === limit;
-        offset += limit;
+				// Check if we have more data
+				hasMoreData = pageItems.length === limit;
+				offset += limit;
 
-        console.log(`✅ MAL page ${currentPage} fetched:`, {
-          itemsOnPage: pageItems.length,
-          totalItems: allAnimeList.length,
-          hasMoreData,
-          nextOffset: offset
-        });
+				console.log(`✅ MAL page ${currentPage} fetched:`, {
+					itemsOnPage: pageItems.length,
+					totalItems: allAnimeList.length,
+					hasMoreData,
+					nextOffset: offset
+				});
 
-        // Send progress update
-        if (progressCallback) {
-          const progressMessage = `Pobrano ${currentPage} stron z MyAnimeList (${allAnimeList.length} anime)`;
-          progressCallback(currentPage, null, progressMessage);
-        }
+				// Send progress update
+				if (progressCallback) {
+					const progressMessage = `Pobrano ${currentPage} stron z MyAnimeList (${allAnimeList.length} anime)`;
+					progressCallback(currentPage, null, progressMessage);
+				}
 
-        currentPage++;
-        await delay(1000); // Rate limit delay
+				currentPage++;
+				await delay(1000); // Rate limit delay
+			} catch (error) {
+				if (error.response?.status === 429) {
+					// Rate limited, wait longer
+					console.log(`⏳ MAL rate limited on page ${currentPage}, waiting 5 seconds...`);
+					await delay(5000);
+					continue;
+				}
+				console.error(`❌ Error fetching MAL page ${currentPage}:`, error.message);
+				throw error;
+			}
+		}
 
-      } catch (error) {
-        if (error.response?.status === 429) {
-          // Rate limited, wait longer
-          console.log(`⏳ MAL rate limited on page ${currentPage}, waiting 5 seconds...`);
-          await delay(5000);
-          continue;
-        }
-        console.error(`❌ Error fetching MAL page ${currentPage}:`, error.message);
-        throw error;
-      }
-    }
+		// Extract malIds for AniList isekai detection
+		const malIds = allAnimeList.map(entry => entry.node.id);
 
-    // Extract malIds for AniList isekai detection
-    const malIds = allAnimeList.map(entry => entry.node.id);
+		// Fetch isekai detection from AniList using malIds
+		console.log(`🔍 Fetching isekai/fantasy classification from AniList for ${malIds.length} anime...`);
+		const isekaiMap = await fetchIsekaiFromAniList(malIds, progressCallback);
 
-    // Fetch isekai detection from AniList using malIds
-    console.log(`🔍 Fetching isekai/fantasy classification from AniList for ${malIds.length} anime...`);
-    const isekaiMap = await fetchIsekaiFromAniList(malIds, progressCallback);
+		// Process each anime entry using AniList classification
+		console.log(`🔍 Processing ${allAnimeList.length} anime entries with AniList classification...`);
 
-    // Process each anime entry using AniList classification
-    console.log(`🔍 Processing ${allAnimeList.length} anime entries with AniList classification...`);
+		const fantasyAnime = [];
+		const isekaiAnime = [];
 
-    const fantasyAnime = [];
-    const isekaiAnime = [];
+		for (const entry of allAnimeList) {
+			try {
+				const malId = entry.node.id;
+				const classification = isekaiMap[malId];
 
-    for (const entry of allAnimeList) {
-      try {
-        const malId = entry.node.id;
-        const classification = isekaiMap[malId];
+				// Create anime object if it matches either filter
+				if (classification?.hasIsekai || classification?.hasFantasy) {
+					const animeObject = {
+						id: entry.node.id,
+						malId: entry.node.id, // For MAL entries, malId is the same as id
+						title: entry.node.title,
+						score: entry.list_status.score || null,
+						status: 'completed',
+						genres: [], // Will be populated from AniList if available
+						themes: [], // Not using themes anymore, using AniList tags
+						coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+						episodes: entry.node.num_episodes,
+						source: 'mal',
+						format: entry.node.media_type,
+						year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
+						description: entry.node.synopsis
+					};
 
-        // Create anime object if it matches either filter
-        if (classification?.hasIsekai || classification?.hasFantasy) {
-          const animeObject = {
-            id: entry.node.id,
-            malId: entry.node.id, // For MAL entries, malId is the same as id
-            title: entry.node.title,
-            score: entry.list_status.score || null,
-            status: 'completed',
-            genres: [], // Will be populated from AniList if available
-            themes: [], // Not using themes anymore, using AniList tags
-            coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
-            episodes: entry.node.num_episodes,
-            source: 'mal',
-            format: entry.node.media_type,
-            year: entry.node.start_date ? new Date(entry.node.start_date).getFullYear() : null,
-            description: entry.node.synopsis
-          };
+					// Classify anime using AniList data (fantasy and isekai can overlap)
+					if (classification.hasIsekai) {
+						console.log(`🌍 Classified as isekai via AniList: "${entry.node.title}" (rank: ${classification.isekaiRank}%)`);
+						isekaiAnime.push(animeObject);
+					}
+					if (classification.hasFantasy) {
+						console.log(`🎭 Classified as fantasy via AniList: "${entry.node.title}"`);
+						fantasyAnime.push(animeObject);
+					}
+				}
+			} catch (error) {
+				console.error(`❌ Error processing anime "${entry.node.title}":`, error.message);
+				// Continue with next anime
+			}
+		}
 
-          // Classify anime using AniList data (fantasy and isekai can overlap)
-          if (classification.hasIsekai) {
-            console.log(`🌍 Classified as isekai via AniList: "${entry.node.title}" (rank: ${classification.isekaiRank}%)`);
-            isekaiAnime.push(animeObject);
-          }
-          if (classification.hasFantasy) {
-            console.log(`🎭 Classified as fantasy via AniList: "${entry.node.title}"`);
-            fantasyAnime.push(animeObject);
-          }
-        }
+		// Return the requested filter type
+		const filteredAnime = filterType === 'fantasy' ? fantasyAnime : isekaiAnime;
 
-      } catch (error) {
-        console.error(`❌ Error processing anime "${entry.node.title}":`, error.message);
-        // Continue with next anime
-      }
-    }
+		console.log(`✅ Processed ${processedCount} anime entries`);
 
-    // Return the requested filter type
-    const filteredAnime = filterType === 'fantasy' ? fantasyAnime : isekaiAnime;
+		// Send final progress update
+		if (progressCallback) {
+			progressCallback(null, null, `Zakończono sprawdzanie: ${filteredAnime.length} anime ${filterType} znaleziono`);
+		}
 
-    console.log(`✅ Processed ${processedCount} anime entries`);
+		console.log(`✅ MAL dual filtering complete:`, {
+			totalEntries: allAnimeList.length,
+			fantasyEntries: fantasyAnime.length,
+			isekaiEntries: isekaiAnime.length,
+			requestedFilter: filterType,
+			returnedEntries: filteredAnime.length,
+			fantasyPercentage: Math.round((fantasyAnime.length / allAnimeList.length) * 100) + '%',
+			isekaiPercentage: Math.round((isekaiAnime.length / allAnimeList.length) * 100) + '%'
+		});
 
-    // Send final progress update
-    if (progressCallback) {
-      progressCallback(null, null, `Zakończono sprawdzanie: ${filteredAnime.length} anime ${filterType} znaleziono`);
-    }
+		// Calculate mean score from completed anime
+		const scoredAnime = allAnimeList.filter(entry => entry.list_status.score > 0);
+		const meanScore =
+			scoredAnime.length > 0 ? Math.round((scoredAnime.reduce((sum, entry) => sum + entry.list_status.score, 0) / scoredAnime.length) * 100) / 100 : 0;
 
-    console.log(`✅ MAL dual filtering complete:`, {
-      totalEntries: allAnimeList.length,
-      fantasyEntries: fantasyAnime.length,
-      isekaiEntries: isekaiAnime.length,
-      requestedFilter: filterType,
-      returnedEntries: filteredAnime.length,
-      fantasyPercentage: Math.round((fantasyAnime.length / allAnimeList.length) * 100) + '%',
-      isekaiPercentage: Math.round((isekaiAnime.length / allAnimeList.length) * 100) + '%'
-    });
+		const result = {
+			username: username, // Use provided username since API doesn't return user info
+			platform: 'mal',
+			avatar: null, // Not available from this API endpoint
+			animeCount: allAnimeList.length,
+			meanScore: meanScore,
+			[filterType === 'fantasy' ? 'fantasyAnime' : 'isekaiAnime']: filteredAnime
+		};
 
-    // Calculate mean score from completed anime
-    const scoredAnime = allAnimeList.filter(entry => entry.list_status.score > 0);
-    const meanScore = scoredAnime.length > 0
-      ? Math.round((scoredAnime.reduce((sum, entry) => sum + entry.list_status.score, 0) / scoredAnime.length) * 100) / 100
-      : 0;
+		console.log('🎉 MAL user fetch completed:', {
+			username: result.username,
+			totalAnime: result.animeCount,
+			[filterType + 'Anime']: filteredAnime.length,
+			meanScore: result.meanScore
+		});
 
-    const result = {
-      username: username, // Use provided username since API doesn't return user info
-      platform: 'mal',
-      avatar: null, // Not available from this API endpoint
-      animeCount: allAnimeList.length,
-      meanScore: meanScore,
-      [filterType === 'fantasy' ? 'fantasyAnime' : 'isekaiAnime']: filteredAnime
-    };
-
-    console.log('🎉 MAL user fetch completed:', {
-      username: result.username,
-      totalAnime: result.animeCount,
-      [filterType + 'Anime']: filteredAnime.length,
-      meanScore: result.meanScore
-    });
-
-    return result;
-  } catch (error) {
-    console.error('Error fetching MAL user:', error);
-    throw new Error(`Failed to fetch MAL user: ${error.message}`);
-  }
+		return result;
+	} catch (error) {
+		console.error('Error fetching MAL user:', error);
+		throw new Error(`Failed to fetch MAL user: ${error.message}`);
+	}
 }
 
 /**
@@ -675,8 +669,8 @@ export async function fetchMALUser(username, filterType = 'fantasy', progressCal
  * @returns {Promise<Object|null>}
  */
 export async function searchMALAnime(title) {
-  try {
-    const query = `
+	try {
+		const query = `
       query ($search: String!) {
         Media(search: $search, type: ANIME) {
           id
@@ -700,25 +694,25 @@ export async function searchMALAnime(title) {
       }
     `;
 
-    const data = await anilistClient.request(query, { search: title });
+		const data = await anilistClient.request(query, { search: title });
 
-    if (!data.Media) return null;
+		if (!data.Media) return null;
 
-    const anime = data.Media;
-    return {
-      id: anime.idMal || anime.id,
-      title: anime.title.english || anime.title.romaji || anime.title.native,
-      genres: anime.genres || [],
-      coverImage: anime.coverImage?.large || '',
-      episodes: anime.episodes || 0,
-      format: anime.format || 'unknown',
-      year: anime.startDate?.year || null,
-      description: anime.description || ''
-    };
-  } catch (error) {
-    console.error('Error searching anime via AniList:', error);
-    return null;
-  }
+		const anime = data.Media;
+		return {
+			id: anime.idMal || anime.id,
+			title: anime.title.english || anime.title.romaji || anime.title.native,
+			genres: anime.genres || [],
+			coverImage: anime.coverImage?.large || '',
+			episodes: anime.episodes || 0,
+			format: anime.format || 'unknown',
+			year: anime.startDate?.year || null,
+			description: anime.description || ''
+		};
+	} catch (error) {
+		console.error('Error searching anime via AniList:', error);
+		return null;
+	}
 }
 
 /**
@@ -727,8 +721,8 @@ export async function searchMALAnime(title) {
  * @returns {Promise<Object|null>}
  */
 export async function getMALAnimeDetails(malId) {
-  try {
-    const query = `
+	try {
+		const query = `
       query ($malId: Int!) {
         Media(idMal: $malId, type: ANIME) {
           id
@@ -758,26 +752,26 @@ export async function getMALAnimeDetails(malId) {
       }
     `;
 
-    const data = await anilistClient.request(query, { malId });
+		const data = await anilistClient.request(query, { malId });
 
-    if (!data.Media) return null;
+		if (!data.Media) return null;
 
-    const anime = data.Media;
-    return {
-      id: anime.idMal || anime.id,
-      title: anime.title.english || anime.title.romaji || anime.title.native,
-      genres: anime.genres || [],
-      coverImage: anime.coverImage?.large || '',
-      episodes: anime.episodes || 0,
-      format: anime.format || 'unknown',
-      year: anime.startDate?.year || null,
-      description: anime.description || '',
-      score: anime.averageScore ? anime.averageScore / 10 : null, // Convert from 0-100 to 0-10 scale
-      popularity: anime.popularity || null,
-      rank: null // AniList doesn't provide rank in the same way
-    };
-  } catch (error) {
-    console.error('Error getting anime details via AniList:', error);
-    return null;
-  }
+		const anime = data.Media;
+		return {
+			id: anime.idMal || anime.id,
+			title: anime.title.english || anime.title.romaji || anime.title.native,
+			genres: anime.genres || [],
+			coverImage: anime.coverImage?.large || '',
+			episodes: anime.episodes || 0,
+			format: anime.format || 'unknown',
+			year: anime.startDate?.year || null,
+			description: anime.description || '',
+			score: anime.averageScore ? anime.averageScore / 10 : null, // Convert from 0-100 to 0-10 scale
+			popularity: anime.popularity || null,
+			rank: null // AniList doesn't provide rank in the same way
+		};
+	} catch (error) {
+		console.error('Error getting anime details via AniList:', error);
+		return null;
+	}
 }

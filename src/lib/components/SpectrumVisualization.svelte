@@ -4,13 +4,13 @@
 	import { SpectrumAnalyzer } from '$lib/spectrum-analyzer';
 
 	let { result } = $props();
-	
+
 	let spectrumDescription = $derived(SpectrumAnalyzer.getSpectrumDescription(result.spectrumPosition));
 	let confidenceDescription = $derived(SpectrumAnalyzer.getConfidenceDescription(result.confidence));
 
 	// Calculate position for visual indicator
 	let indicatorPosition = $derived(result.spectrumPosition);
-	
+
 	// Get color based on position
 	function getPositionColor(position) {
 		if (position < 25) return 'bg-blue-500';
@@ -27,9 +27,9 @@
 	}
 </script>
 
-<Card class="bg-gray-900 border-gray-800">
+<Card class="border-gray-800 bg-gray-900">
 	<CardHeader class="">
-		<CardTitle class="text-white text-2xl">Autism Spectrum Analysis</CardTitle>
+		<CardTitle class="text-2xl text-white">Autism Spectrum Analysis</CardTitle>
 		<CardDescription class="text-gray-400">
 			Based on {result.totalCommonAnime} common {result.mode} anime with base users
 		</CardDescription>
@@ -38,57 +38,54 @@
 		<!-- Spectrum Visualization -->
 		<div class="space-y-4">
 			<div class="text-center">
-				<h3 class="text-lg font-semibold text-white mb-2">Your Position on the Spectrum</h3>
-				<p class="text-gray-300 text-sm mb-4">{spectrumDescription}</p>
+				<h3 class="mb-2 text-lg font-semibold text-white">Your Position on the Spectrum</h3>
+				<p class="mb-4 text-sm text-gray-300">{spectrumDescription}</p>
 			</div>
-			
+
 			<!-- Visual Spectrum Bar -->
 			<div class="relative">
 				<!-- Background bar -->
-				<div class="w-full h-8 bg-gradient-to-r from-blue-600 via-purple-600 to-red-600 rounded-lg relative overflow-hidden">
+				<div class="relative h-8 w-full overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 via-purple-600 to-red-600">
 					<!-- Position indicator -->
-					<div 
-						class="absolute top-0 h-full w-1 bg-white shadow-lg transition-all duration-500"
-						style="left: {indicatorPosition}%"
-					></div>
+					<div class="absolute top-0 h-full w-1 bg-white shadow-lg transition-all duration-500" style="left: {indicatorPosition}%"></div>
 				</div>
-				
+
 				<!-- Labels -->
-				<div class="flex justify-between mt-2 text-xs text-gray-400">
+				<div class="mt-2 flex justify-between text-xs text-gray-400">
 					<span>Kodjax-aligned</span>
 					<span class="text-center">Balanced</span>
 					<span class="text-right">MrBall-aligned</span>
 				</div>
 			</div>
-			
+
 			<!-- Position Details -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-				<div class="text-center p-4 bg-gray-800 rounded-lg">
-					<div class="text-2xl font-bold text-white mb-1">
+			<div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+				<div class="rounded-lg bg-gray-800 p-4 text-center">
+					<div class="mb-1 text-2xl font-bold text-white">
 						{result.spectrumPosition.toFixed(1)}%
 					</div>
 					<div class="text-sm text-gray-400">Spectrum Position</div>
-					<Badge class="{getPositionColor(result.spectrumPosition)} text-white mt-2">
+					<Badge class="{getPositionColor(result.spectrumPosition)} mt-2 text-white">
 						{result.spectrumPosition < 50 ? 'Kodjax Side' : 'MrBall Side'}
 					</Badge>
 				</div>
-				
-				<div class="text-center p-4 bg-gray-800 rounded-lg">
-					<div class="text-2xl font-bold text-white mb-1">
+
+				<div class="rounded-lg bg-gray-800 p-4 text-center">
+					<div class="mb-1 text-2xl font-bold text-white">
 						{result.confidence.toFixed(1)}%
 					</div>
 					<div class="text-sm text-gray-400">Confidence Level</div>
-					<Badge class="{getConfidenceColor(result.confidence)} text-white mt-2">
+					<Badge class="{getConfidenceColor(result.confidence)} mt-2 text-white">
 						{confidenceDescription.split(' - ')[0]}
 					</Badge>
 				</div>
-				
-				<div class="text-center p-4 bg-gray-800 rounded-lg">
-					<div class="text-2xl font-bold text-white mb-1">
+
+				<div class="rounded-lg bg-gray-800 p-4 text-center">
+					<div class="mb-1 text-2xl font-bold text-white">
 						{result.totalCommonAnime}
 					</div>
 					<div class="text-sm text-gray-400">Common Anime</div>
-					<Badge class="bg-purple-600 text-white mt-2">
+					<Badge class="mt-2 bg-purple-600 text-white">
 						{result.mode.charAt(0).toUpperCase() + result.mode.slice(1)}
 					</Badge>
 				</div>
@@ -96,31 +93,27 @@
 		</div>
 
 		<!-- Deviation Stats -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<div class="bg-gray-800 rounded-lg p-4">
-				<h4 class="text-white font-semibold mb-2 flex items-center">
-					<span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+			<div class="rounded-lg bg-gray-800 p-4">
+				<h4 class="mb-2 flex items-center font-semibold text-white">
+					<span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span>
 					Deviation from Kodjax
 				</h4>
 				<div class="text-2xl font-bold text-blue-400">
 					{result.averageDeviationFromKodjax.toFixed(2)}
 				</div>
-				<div class="text-xs text-gray-400 mt-1">
-					Average score difference
-				</div>
+				<div class="mt-1 text-xs text-gray-400">Average score difference</div>
 			</div>
-			
-			<div class="bg-gray-800 rounded-lg p-4">
-				<h4 class="text-white font-semibold mb-2 flex items-center">
-					<span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+
+			<div class="rounded-lg bg-gray-800 p-4">
+				<h4 class="mb-2 flex items-center font-semibold text-white">
+					<span class="mr-2 h-3 w-3 rounded-full bg-red-500"></span>
 					Deviation from MrBall
 				</h4>
 				<div class="text-2xl font-bold text-red-400">
 					{result.averageDeviationFromPastafarianin.toFixed(2)}
 				</div>
-				<div class="text-xs text-gray-400 mt-1">
-					Average score difference
-				</div>
+				<div class="mt-1 text-xs text-gray-400">Average score difference</div>
 			</div>
 		</div>
 	</CardContent>

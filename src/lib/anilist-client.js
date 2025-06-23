@@ -69,7 +69,7 @@ export async function fetchAnimeClassification(malIds, progressCallback) {
 			const response = await fetch('https://graphql.anilist.co', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					query,
@@ -93,9 +93,7 @@ export async function fetchAnimeClassification(malIds, progressCallback) {
 				for (const anime of data.data.Page.media) {
 					if (anime.idMal) {
 						// Check for isekai tag with >80% rank
-						const hasIsekaiTag = anime.tags?.some(tag =>
-							tag.name.toLowerCase() === 'isekai' && tag.rank >= 80
-						);
+						const hasIsekaiTag = anime.tags?.some(tag => tag.name.toLowerCase() === 'isekai' && tag.rank >= 80);
 
 						// Check for fantasy genre
 						const hasFantasy = anime.genres?.includes('Fantasy');
@@ -117,14 +115,15 @@ export async function fetchAnimeClassification(malIds, progressCallback) {
 					}
 				}
 			}
-
 		} catch (error) {
 			console.error(`Error fetching AniList data for batch ${currentBatch}:`, error.message);
 			// Continue with next batch
 		}
 	}
 
-	console.log(`✅ AniList classification completed. Found ${Object.values(classificationMap).filter(a => a.hasIsekai).length} isekai and ${Object.values(classificationMap).filter(a => a.hasFantasy).length} fantasy anime.`);
+	console.log(
+		`✅ AniList classification completed. Found ${Object.values(classificationMap).filter(a => a.hasIsekai).length} isekai and ${Object.values(classificationMap).filter(a => a.hasFantasy).length} fantasy anime.`
+	);
 
 	return classificationMap;
 }
@@ -133,7 +132,7 @@ export async function fetchAnimeClassification(malIds, progressCallback) {
 export function applyClassificationToAnimeList(animeList, classificationMap) {
 	return animeList.map(anime => {
 		const classification = classificationMap[anime.malId];
-		
+
 		if (classification) {
 			return {
 				...anime,
@@ -144,7 +143,7 @@ export function applyClassificationToAnimeList(animeList, classificationMap) {
 				themes: classification.tags
 			};
 		}
-		
+
 		// If no classification found, set defaults
 		return {
 			...anime,

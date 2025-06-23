@@ -20,24 +20,28 @@ async function waitForRateLimit(platform) {
 	limiter.lastRequest = Date.now();
 }
 
-
-
 export async function GET({ params }) {
 	const { username } = params;
-	
+
 	try {
 		await waitForRateLimit('mal');
-		
+
 		// First, get the user's anime list from official MAL API
-		const response = await fetch(`https://api.myanimelist.net/v2/users/${username}/animelist?fields=list_status,node(id,title,main_picture,num_episodes,media_type,start_date,synopsis)&limit=1000`, {
-			headers: {
-				'X-MAL-CLIENT-ID': MAL_CLIENT_ID
+		const response = await fetch(
+			`https://api.myanimelist.net/v2/users/${username}/animelist?fields=list_status,node(id,title,main_picture,num_episodes,media_type,start_date,synopsis)&limit=1000`,
+			{
+				headers: {
+					'X-MAL-CLIENT-ID': MAL_CLIENT_ID
+				}
 			}
-		});
-		
+		);
+
 		if (!response.ok) {
 			if (response.status === 404) {
-				return json({ error: `User "${username}" not found on MyAnimeList. Please check the username spelling and make sure the profile exists.` }, { status: 404 });
+				return json(
+					{ error: `User "${username}" not found on MyAnimeList. Please check the username spelling and make sure the profile exists.` },
+					{ status: 404 }
+				);
 			}
 			if (response.status === 403) {
 				return json({ error: `User "${username}" has a private anime list on MyAnimeList. Only public anime lists can be analyzed.` }, { status: 403 });
@@ -45,17 +49,22 @@ export async function GET({ params }) {
 			if (response.status === 401) {
 				return json({ error: `Access denied for user "${username}" on MyAnimeList. The profile may have restricted access.` }, { status: 401 });
 			}
-			return json({ error: `Failed to fetch data for user "${username}" from MyAnimeList: ${response.status} ${response.statusText}. Please try again or check if the username is correct.` }, { status: response.status });
+			return json(
+				{
+					error: `Failed to fetch data for user "${username}" from MyAnimeList: ${response.status} ${response.statusText}. Please try again or check if the username is correct.`
+				},
+				{ status: response.status }
+			);
 		}
-		
+
 		const data = await response.json();
-		
+
 		if (!data.data || !Array.isArray(data.data)) {
 			return json({ error: 'Invalid response format from MyAnimeList API' }, { status: 500 });
 		}
-		
+
 		// Filter for rated anime and get basic info
-		const ratedEntries = data.data.filter((entry) => entry.list_status.score > 0);
+		const ratedEntries = data.data.filter(entry => entry.list_status.score > 0);
 
 		// Process each anime entry with basic MAL data only
 		const animeList = ratedEntries.map(entry => ({
@@ -77,10 +86,10 @@ export async function GET({ params }) {
 			hasFantasy: null,
 			isekaiRank: null
 		}));
-		
+
 		const totalScore = animeList.reduce((sum, anime) => sum + anime.score, 0);
 		const meanScore = animeList.length > 0 ? totalScore / animeList.length : 0;
-		
+
 		return json({
 			username,
 			platform: 'mal',
@@ -88,7 +97,6 @@ export async function GET({ params }) {
 			meanScore,
 			animeCount: animeList.length
 		});
-		
 	} catch (error) {
 		console.error('Error fetching MAL data:', error);
 		return json({ error: 'Unknown error occurred while fetching MAL data' }, { status: 500 });

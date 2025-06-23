@@ -41,11 +41,10 @@ export function filterAnimeByMode(animeList, mode) {
 
 	if (mode === 'fantasy') {
 		// Filter for anime that are Fantasy but are NOT considered Isekai.
-		return animeList.filter(anime =>
-			(anime.genres.includes('Fantasy') ||
-				anime.hasFantasy === true ||
-				(anime.themes && anime.themes.some(theme => theme.toLowerCase().includes('fantasy')))) &&
-			!isConsideredIsekai(anime)
+		return animeList.filter(
+			anime =>
+				(anime.genres.includes('Fantasy') || anime.hasFantasy === true || (anime.themes && anime.themes.some(theme => theme.toLowerCase().includes('fantasy')))) &&
+				!isConsideredIsekai(anime)
 		);
 	} else if (mode === 'isekai') {
 		// The Isekai filter remains the same, selecting all anime that fit its criteria.
@@ -122,9 +121,7 @@ export function findCommonAnime(userAnimeList, pastafarianinList, kodjaxList) {
 
 // Calculate spectrum position based on score deviations
 export function calculateSpectrumPosition(comparisons) {
-	const validComparisons = comparisons.filter(c =>
-		c.pastafarianinDeviation !== undefined && c.kodjaxDeviation !== undefined
-	);
+	const validComparisons = comparisons.filter(c => c.pastafarianinDeviation !== undefined && c.kodjaxDeviation !== undefined);
 
 	if (validComparisons.length === 0) {
 		return 50; // Default to middle if no valid comparisons
@@ -158,9 +155,7 @@ export function calculateSpectrumPosition(comparisons) {
 
 // Calculate average deviation from a base user
 export function calculateAverageDeviation(comparisons, baseUser) {
-	const deviations = comparisons
-		.map(c => baseUser === 'kodjax' ? c.kodjaxDeviation : c.pastafarianinDeviation)
-		.filter(d => d !== undefined);
+	const deviations = comparisons.map(c => (baseUser === 'kodjax' ? c.kodjaxDeviation : c.pastafarianinDeviation)).filter(d => d !== undefined);
 
 	if (deviations.length === 0) return 0;
 
@@ -296,7 +291,7 @@ function getScoringSystem(userData, username) {
 
 	// Known users with specific scoring systems (fallback)
 	const knownScoringUsers = {
-		'blonzej': 'POINT_3' // Known to use smiley system
+		blonzej: 'POINT_3' // Known to use smiley system
 	};
 
 	return knownScoringUsers[username.toLowerCase()] || 'POINT_10_DECIMAL';
@@ -312,11 +307,11 @@ function translateScore(score, scoringSystem) {
 			return score;
 
 		case 'POINT_5': // 5-star system (uses values 10, 30, 50, 70, 90)
-			if (score === 10) return 1.0;  // 1 star
-			if (score === 30) return 3.0;  // 2 stars
-			if (score === 50) return 5.0;  // 3 stars
-			if (score === 70) return 7.0;  // 4 stars
-			if (score === 90) return 9.0;  // 5 stars
+			if (score === 10) return 1.0; // 1 star
+			if (score === 30) return 3.0; // 2 stars
+			if (score === 50) return 5.0; // 3 stars
+			if (score === 70) return 7.0; // 4 stars
+			if (score === 90) return 9.0; // 5 stars
 			return score;
 
 		case 'POINT_100': // 100-point system
@@ -360,8 +355,6 @@ function applyScoreTranslation(animeList, username, userData = null) {
 	return animeList;
 }
 
-
-
 // Calculate 2D position for 4-user compass (political compass style)
 export function calculate2DPosition(comparisons) {
 	// Filter comparisons that have at least 2 base users with scores
@@ -400,12 +393,12 @@ export function calculate2DPosition(comparisons) {
 
 	// Calculate an "alikeness" score (1.0 for best match, 0.0 for worst match)
 	const alikeness = {
-		pastafarianin: 1 - ((avgDeviations.pastafarianin - minDev) / devRange),
-		kodjax: 1 - ((avgDeviations.kodjax - minDev) / devRange),
-		mayxs: 1 - ((avgDeviations.mayxs - minDev) / devRange),
-		blonzej: 1 - ((avgDeviations.blonzej - minDev) / devRange)
+		pastafarianin: 1 - (avgDeviations.pastafarianin - minDev) / devRange,
+		kodjax: 1 - (avgDeviations.kodjax - minDev) / devRange,
+		mayxs: 1 - (avgDeviations.mayxs - minDev) / devRange,
+		blonzej: 1 - (avgDeviations.blonzej - minDev) / devRange
 	};
-	
+
 	// Use the "alikeness" scores to determine the pull on each axis
 	// Updated for Kodjax/Blonzej swap: Blonzej now top-right, Kodjax bottom-right
 	const leftPull = alikeness.pastafarianin + alikeness.mayxs;
@@ -415,20 +408,17 @@ export function calculate2DPosition(comparisons) {
 
 	const totalXPull = leftPull + rightPull;
 	const totalYPull = topPull + bottomPull;
-	
+
 	const x = totalXPull > 0 ? (rightPull / totalXPull) * 100 : 50;
 	const y = totalYPull > 0 ? (bottomPull / totalYPull) * 100 : 50;
 
 	return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
 }
 
-
 // Calculate average deviation for a specific base user in 4-user mode
 function calculateAverageDeviationFor4User(comparisons, baseUser) {
 	const deviationKey = `${baseUser}Deviation`;
-	const deviations = comparisons
-		.map(c => c[deviationKey])
-		.filter(d => d !== undefined);
+	const deviations = comparisons.map(c => c[deviationKey]).filter(d => d !== undefined);
 
 	if (deviations.length === 0) return 0;
 
