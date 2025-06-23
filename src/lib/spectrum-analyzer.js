@@ -1,5 +1,6 @@
 import { fetchUserAnimeList, validateUsername } from './api-utils.js';
 import { generateSpectrumResult } from './data-utils.js';
+import { fetchAnimeClassification, applyClassificationToAnimeList } from './anilist-client.js';
 
 // Main spectrum analyzer class
 export class SpectrumAnalyzer {
@@ -25,16 +26,16 @@ export class SpectrumAnalyzer {
 			}
 			
 			// Stage 2: Fetching user data
-			this.updateProgress('fetching', `Fetching anime list from ${platform.toUpperCase()}...`, 30);
+			this.updateProgress('fetching', `Fetching anime list from ${platform.toUpperCase()}...`, 20);
 
 			let userAnimeList;
 			try {
 				// Create a progress callback that updates the main progress
 				const fetchProgressCallback = (fetchProgress) => {
-					if (fetchProgress.stage === 'processing') {
-						// Map fetch progress to analysis progress (30-70% range)
-						const mappedProgress = 30 + Math.floor((fetchProgress.progress - 20) * 0.57); // Scale 20-90% to 30-70%
-						this.updateProgress('fetching', fetchProgress.message, mappedProgress);
+					if (fetchProgress.stage === 'fetching') {
+						this.updateProgress('fetching', fetchProgress.message, 20);
+					} else if (fetchProgress.stage === 'fetched') {
+						this.updateProgress('fetching', fetchProgress.message, 30);
 					}
 				};
 
@@ -49,8 +50,37 @@ export class SpectrumAnalyzer {
 				throw new AnalysisError('ANALYSIS_ERROR', 'No rated anime found for this user');
 			}
 
-			// Stage 3: Analyzing spectrum position
-			this.updateProgress('analyzing', 'Calculating spectrum position...', 70);
+			// Stage 3: Classify anime (only for MAL users, AniList already has classification)
+			if (platform === 'mal') {
+				this.updateProgress('classifying', 'Classifying anime from AniList...', 40);
+
+				try {
+					// Extract malIds for classification
+					const malIds = userAnimeList.animeList
+						.filter(anime => anime.malId)
+						.map(anime => anime.malId);
+
+					// Create a progress callback for classification
+					const classificationProgressCallback = (classificationProgress) => {
+						// Map classification progress to analysis progress (40-70% range)
+						const mappedProgress = 40 + Math.floor((classificationProgress.progress / 100) * 30);
+						this.updateProgress('classifying', classificationProgress.message, mappedProgress);
+					};
+
+					// Fetch classification from AniList
+					const classificationMap = await fetchAnimeClassification(malIds, classificationProgressCallback);
+
+					// Apply classification to anime list
+					userAnimeList.animeList = applyClassificationToAnimeList(userAnimeList.animeList, classificationMap);
+
+				} catch (error) {
+					console.warn('Failed to classify anime, proceeding with basic data:', error.message);
+					// Continue with unclassified data
+				}
+			}
+
+			// Stage 4: Analyzing spectrum position
+			this.updateProgress('analyzing', 'Calculating spectrum position...', 80);
 
 			let result;
 			try {
@@ -66,7 +96,7 @@ export class SpectrumAnalyzer {
 					`No common ${mode} anime found with base users. Try the other mode or a different user.`);
 			}
 			
-			// Stage 4: Complete
+			// Stage 5: Complete
 			this.updateProgress('complete', 'Analysis complete!', 100);
 			
 			return result;
@@ -118,20 +148,7 @@ export class SpectrumAnalyzer {
 		}
 	}
 	
-	// Get autism spectrum interpretation (humorous)
-	static getAutismSpectrumInterpretation(position) {
-		if (position < 20) {
-			return "Peak autism achieved - You are one with the spectrum";
-		} else if (position < 40) {
-			return "High-functioning autism - Strong spectrum energy detected";
-		} else if (position < 60) {
-			return "Moderate autism levels - Balanced on the spectrum";
-		} else if (position < 80) {
-			return "Mild autism tendencies - Approaching normie territory";
-		} else {
-			return "Dangerously close to normie status - Seek immediate anime intervention";
-		}
-	}
+
 
 	// Get quadrant description for 4-user compass
 	static getQuadrantDescription(quadrant) {
