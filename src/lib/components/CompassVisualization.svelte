@@ -3,6 +3,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import { SpectrumAnalyzer } from '$lib/spectrum-analyzer';
+	import { getUserBackgroundColor, getUserTextColor, getUserDotColor, userDisplayNames } from '$lib/user-colors';
 
 	let { result } = $props();
 
@@ -12,13 +13,7 @@
 
 	// Get color based on quadrant
 	function getQuadrantColor(quadrant) {
-		const colors = {
-			pastafarianin: 'bg-red-500',
-			kodjax: 'bg-yellow-500', // Swapped: Kodjax now gets yellow (was blue)
-			mayxs: 'bg-green-500',
-			blonzej: 'bg-blue-500' // Swapped: Blonzej now gets blue (was yellow)
-		};
-		return colors[quadrant] || 'bg-gray-500';
+		return getUserBackgroundColor(quadrant);
 	}
 
 	// Get confidence color
@@ -28,13 +23,7 @@
 		return 'bg-green-500';
 	}
 
-	// User names for display (with MrBall preference)
-	const userDisplayNames = {
-		pastafarianin: 'MrBall',
-		kodjax: 'Kodjax',
-		mayxs: 'MaYxS',
-		blonzej: 'Blonzej'
-	};
+
 
 	// Check if user has smiley scoring system
 	let userHasSmileySystem = $derived.by(() => {
@@ -107,16 +96,16 @@
 				</div>
 
 				<!-- Corner labels -->
-				<div class="absolute -top-6 -left-6 text-xs font-semibold text-red-400">
+				<div class="absolute -top-6 -left-6 text-xs font-semibold {getUserTextColor('pastafarianin')}">
 					{userDisplayNames.pastafarianin}
 				</div>
-				<div class="absolute -top-6 -right-6 text-xs font-semibold text-blue-400">
+				<div class="absolute -top-6 -right-6 text-xs font-semibold {getUserTextColor('blonzej')}">
 					{userDisplayNames.blonzej}
 				</div>
-				<div class="absolute -bottom-6 -left-6 text-xs font-semibold text-green-400">
+				<div class="absolute -bottom-6 -left-6 text-xs font-semibold {getUserTextColor('mayxs')}">
 					{userDisplayNames.mayxs}
 				</div>
-				<div class="absolute -right-6 -bottom-6 text-xs font-semibold text-yellow-400">
+				<div class="absolute -right-6 -bottom-6 text-xs font-semibold {getUserTextColor('kodjax')}">
 					{userDisplayNames.kodjax}
 				</div>
 			</div>
@@ -159,10 +148,10 @@
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
 			<div class="rounded-lg bg-gray-800 p-4">
 				<h4 class="mb-2 flex items-center font-semibold text-white">
-					<span class="mr-2 h-3 w-3 rounded-full bg-red-500"></span>
+					<span class="mr-2 h-3 w-3 rounded-full {getUserDotColor('pastafarianin')}"></span>
 					{userDisplayNames.pastafarianin}
 				</h4>
-				<div class="text-xl font-bold text-red-400">
+				<div class="text-xl font-bold {getUserTextColor('pastafarianin')}">
 					{result.averageDeviations.pastafarianin.toFixed(2)}
 				</div>
 				<div class="mt-1 text-xs text-gray-400">Avg deviation</div>
@@ -170,10 +159,10 @@
 
 			<div class="rounded-lg bg-gray-800 p-4">
 				<h4 class="mb-2 flex items-center font-semibold text-white">
-					<span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span>
+					<span class="mr-2 h-3 w-3 rounded-full {getUserDotColor('kodjax')}"></span>
 					{userDisplayNames.kodjax}
 				</h4>
-				<div class="text-xl font-bold text-blue-400">
+				<div class="text-xl font-bold {getUserTextColor('kodjax')}">
 					{result.averageDeviations.kodjax.toFixed(2)}
 				</div>
 				<div class="mt-1 text-xs text-gray-400">Avg deviation</div>
@@ -181,10 +170,10 @@
 
 			<div class="rounded-lg bg-gray-800 p-4">
 				<h4 class="mb-2 flex items-center font-semibold text-white">
-					<span class="mr-2 h-3 w-3 rounded-full bg-green-500"></span>
+					<span class="mr-2 h-3 w-3 rounded-full {getUserDotColor('mayxs')}"></span>
 					{userDisplayNames.mayxs}
 				</h4>
-				<div class="text-xl font-bold text-green-400">
+				<div class="text-xl font-bold {getUserTextColor('mayxs')}">
 					{result.averageDeviations.mayxs.toFixed(2)}
 				</div>
 				<div class="mt-1 text-xs text-gray-400">Avg deviation</div>
@@ -192,10 +181,10 @@
 
 			<div class="rounded-lg bg-gray-800 p-4">
 				<h4 class="mb-2 flex items-center font-semibold text-white">
-					<span class="mr-2 h-3 w-3 rounded-full bg-yellow-500"></span>
+					<span class="mr-2 h-3 w-3 rounded-full {getUserDotColor('blonzej')}"></span>
 					{userDisplayNames.blonzej}
 				</h4>
-				<div class="text-xl font-bold text-yellow-400">
+				<div class="text-xl font-bold {getUserTextColor('blonzej')}">
 					{result.averageDeviations.blonzej.toFixed(2)}
 				</div>
 				<div class="mt-1 text-xs text-gray-400">Avg deviation</div>

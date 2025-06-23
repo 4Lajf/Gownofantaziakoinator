@@ -74,6 +74,9 @@ export class SpectrumAnalyzer {
 					console.warn('Failed to classify anime, proceeding with basic data:', error.message);
 					// Continue with unclassified data
 				}
+			} else {
+				// AniList users already have classification data, skip to analysis
+				this.updateProgress('classifying', 'Using AniList classification data...', 70);
 			}
 
 			// Stage 4: Analyzing spectrum position

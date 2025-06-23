@@ -2,6 +2,7 @@
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { SpectrumAnalyzer } from '$lib/spectrum-analyzer';
+	import { getUserTextColor, getUserDotColor } from '$lib/user-colors';
 
 	let { result } = $props();
 
@@ -10,6 +11,8 @@
 
 	// Calculate position for visual indicator
 	let indicatorPosition = $derived(result.spectrumPosition);
+
+
 
 	// Get color based on position
 	function getPositionColor(position) {
@@ -96,10 +99,10 @@
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 			<div class="rounded-lg bg-gray-800 p-4">
 				<h4 class="mb-2 flex items-center font-semibold text-white">
-					<span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span>
+					<span class="mr-2 h-3 w-3 rounded-full {getUserDotColor('kodjax')}"></span>
 					Deviation from Kodjax
 				</h4>
-				<div class="text-2xl font-bold text-blue-400">
+				<div class="text-2xl font-bold {getUserTextColor('kodjax')}">
 					{result.averageDeviationFromKodjax.toFixed(2)}
 				</div>
 				<div class="mt-1 text-xs text-gray-400">Average score difference</div>
@@ -107,10 +110,10 @@
 
 			<div class="rounded-lg bg-gray-800 p-4">
 				<h4 class="mb-2 flex items-center font-semibold text-white">
-					<span class="mr-2 h-3 w-3 rounded-full bg-red-500"></span>
+					<span class="mr-2 h-3 w-3 rounded-full {getUserDotColor('pastafarianin')}"></span>
 					Deviation from MrBall
 				</h4>
-				<div class="text-2xl font-bold text-red-400">
+				<div class="text-2xl font-bold {getUserTextColor('pastafarianin')}">
 					{result.averageDeviationFromPastafarianin.toFixed(2)}
 				</div>
 				<div class="mt-1 text-xs text-gray-400">Average score difference</div>
